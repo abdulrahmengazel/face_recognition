@@ -10,7 +10,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 # Import the shared config
 import src.config as config
 from src.database import Database
-from src.train import train_model
+from src.train import run_training_gui  # <-- IMPORT THE NEW GUI FUNCTION
 from src.image_app import run_image_app
 from src.video_app import run_video_app
 
@@ -128,10 +128,11 @@ class MainApp:
         print(f"Settings Updated: Encoding={config.ENCODING_MODEL}, Detection={config.FACE_DETECTION_MODEL}, Threshold={config.RECOGNITION_THRESHOLD}")
 
     def run_training(self):
-        if messagebox.askyesno("Confirm", "This will scan the TrainingImages folder. The app may freeze. Continue?"):
+        # <-- UPDATED THIS FUNCTION
+        if messagebox.askyesno("Confirm", "This will scan the TrainingImages folder and update the database. Continue?"):
             try:
-                train_model()
-                messagebox.showinfo("Success", "Training complete!")
+                # Call the new GUI function, passing the main window as the parent
+                run_training_gui(self.root)
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to start training: {e}")
 

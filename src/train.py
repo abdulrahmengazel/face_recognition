@@ -2,6 +2,9 @@ import cv2
 import face_recognition
 import os
 import numpy as np
+import threading
+import tkinter as tk
+from tkinter import ttk, messagebox
 from src.database import Database
 import src.config as config
 from src.face_detector import detect_faces
@@ -17,12 +20,11 @@ def resize_image(image, target_size):
 def get_encodings_for_image(image_rgb):
     """
     Gets both dlib and facenet encodings for a single image.
-    This ensures data is always available for both models.
     """
     dlib_enc = None
     facenet_enc = None
 
-    # Use the configured detector (YOLO/CNN/HOG)
+    # Use the configured detector
     locs = detect_faces(image_rgb, config.FACE_DETECTION_MODEL, confidence=config.YOLO_CONFIDENCE, yolo_weights=config.YOLO_WEIGHTS)
     
     if not locs:
@@ -41,23 +43,22 @@ def get_encodings_for_image(image_rgb):
         try:
             embedding_objs = DeepFace.represent(img_path=face_img, model_name='Facenet', enforce_detection=False)
             if embedding_objs:
-                facenet_enc = np.array(embedding_objs[0]['embedding']) # Ensure it's numpy array
+                facenet_enc = np.array(embedding_objs[0]['embedding'])
         except:
             pass 
             
     return dlib_enc, facenet_enc
 
-def train_model(training_dir="TrainingImages"):
+def train_model(training_dir="TrainingImages", progress_callback=None):
     """
-    Scans images and saves BOTH dlib and facenet encodings in the SAME record.
+    Scans images and saves encodings.
+    progress_callback: function(current_index, total_count, message)
     """
     if not os.path.exists(training_dir):
+        if progress_callback: progress_callback(0, 0, "Training directory not found!")
         return
 
     print(f"Starting Unified Training...")
-    print(f" - Detection Model: {config.FACE_DETECTION_MODEL}")
-    
-    saved_count = 0
     
     Database.init_tables()
 
@@ -65,8 +66,19 @@ def train_model(training_dir="TrainingImages"):
         with conn.cursor() as cursor:
             
             people = [d for d in os.listdir(training_dir) if os.path.isdir(os.path.join(training_dir, d))]
+            total_people = len(people)
             
-            for person_name in people:
+            if total_people == 0:
+                if progress_callback: progress_callback(0, 0, "No people found to train.")
+                return
+
+            saved_count = 0
+            
+            for i, person_name in enumerate(people):
+                # Update Progress
+                if progress_callback:
+                    progress_callback(i, total_people, f"Processing: {person_name}...")
+
                 person_path = os.path.join(training_dir, person_name)
                 
                 cursor.execute("SELECT id FROM people WHERE name = %s;", (person_name,))
@@ -101,8 +113,6 @@ def train_model(training_dir="TrainingImages"):
                 final_dlib_enc = np.mean(dlib_encodings, axis=0) if dlib_encodings else None
                 final_facenet_enc = np.mean(facenet_encodings, axis=0) if facenet_encodings else None
 
-                # FIX: Use .tolist() to convert numpy array to standard python list of floats
-                # This avoids the "np.float64" string representation issue
                 dlib_vec_str = str(final_dlib_enc.tolist()) if final_dlib_enc is not None else None
                 facenet_vec_str = str(final_facenet_enc.tolist()) if final_facenet_enc is not None else None
 
@@ -118,9 +128,71 @@ def train_model(training_dir="TrainingImages"):
                 
                 conn.commit()
                 saved_count += 1
-                print(f"Processed and saved unified encoding for: {person_name}")
+                
+            # Final update
+            if progress_callback:
+                progress_callback(total_people, total_people, "Training Completed!")
 
     print(f"Training Finished. Processed {saved_count} people.")
+
+# --- GUI WRAPPER ---
+
+def run_training_gui(parent_root):
+    """
+    Opens a progress window and runs training in a separate thread.
+    """
+    window = tk.Toplevel(parent_root)
+    window.title("Training Progress")
+    window.geometry("400x150")
+    window.transient(parent_root)
+    window.grab_set()
+    
+    # Center the window
+    window.update_idletasks()
+    width = window.winfo_width()
+    height = window.winfo_height()
+    x = (window.winfo_screenwidth() // 2) - (width // 2)
+    y = (window.winfo_screenheight() // 2) - (height // 2)
+    window.geometry(f'{width}x{height}+{x}+{y}')
+
+    # UI Elements
+    lbl_status = ttk.Label(window, text="Initializing...", font=("Helvetica", 10))
+    lbl_status.pack(pady=(20, 10))
+
+    progress_var = tk.DoubleVar()
+    progress_bar = ttk.Progressbar(window, variable=progress_var, maximum=100)
+    progress_bar.pack(fill="x", padx=20, pady=10)
+
+    lbl_percent = ttk.Label(window, text="0%")
+    lbl_percent.pack(pady=5)
+
+    # Thread-safe callback
+    def update_ui(current, total, message):
+        def _update():
+            if total > 0:
+                percent = (current / total) * 100
+                progress_var.set(percent)
+                lbl_percent.config(text=f"{int(percent)}%")
+            lbl_status.config(text=message)
+            
+            if message == "Training Completed!":
+                messagebox.showinfo("Success", "Training finished successfully!")
+                window.destroy()
+        
+        window.after(0, _update)
+
+    # Run training in background thread
+    def start_thread():
+        try:
+            train_model(progress_callback=update_ui)
+        except Exception as e:
+            window.after(0, lambda: messagebox.showerror("Error", f"Training failed: {e}"))
+            window.after(0, window.destroy)
+
+    threading.Thread(target=start_thread, daemon=True).start()
+    
+    # Don't wait_window here if you want the main app to remain responsive (though grab_set makes it modal)
+    # parent_root.wait_window(window)
 
 if __name__ == "__main__":
     Database.initialize_pool()

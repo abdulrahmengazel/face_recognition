@@ -16,14 +16,19 @@ def add_new_face():
     messagebox.showinfo("Info", "Please use the 'Run Bulk Training' button in the main menu for adding new faces.")
 
 def find_nearest_face_in_db(encoding_to_check, cursor):
-    """Searches the DB for the closest face using the correct column."""
+    """Searches the DB for the closest face using the correct column and distance operator."""
     try:
-        # FIX: Use .tolist() for numpy arrays
         vec_str = str(encoding_to_check.tolist()) if hasattr(encoding_to_check, 'tolist') else str(encoding_to_check)
-        column_name = "encoding" if config.ENCODING_MODEL == "dlib" else f"encoding_{config.ENCODING_MODEL}"
         
+        if config.ENCODING_MODEL == "dlib":
+            column_name = "encoding"
+            distance_operator = "<->"  # L2 distance for dlib
+        else:
+            column_name = f"encoding_{config.ENCODING_MODEL}"
+            distance_operator = "<=>"  # Cosine distance for FaceNet
+
         query = f"""
-            SELECT p.name, f.{column_name} <-> %s AS distance
+            SELECT p.name, f.{column_name} {distance_operator} %s AS distance
             FROM people p JOIN face_encodings f ON p.id = f.person_id
             WHERE f.{column_name} IS NOT NULL
             ORDER BY distance ASC
@@ -33,6 +38,7 @@ def find_nearest_face_in_db(encoding_to_check, cursor):
         result = cursor.fetchone()
         return result if result else (None, None)
     except Exception as e:
+        print(f"Database search error: {e}")
         return None, None
 
 # --- THREADING CLASSES ---

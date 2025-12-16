@@ -12,9 +12,10 @@ FACE_DETECTION_MODEL = "yolo"
 # --- Recognition Threshold ---
 # Distance threshold for matching faces.
 # Lower = Stricter (Less False Positives, More False Negatives)
-# Higher = Looser (More False Positives, Less False Negatives)
-# Recommended: dlib ~ 0.6, facenet ~ 0.8 to 1.0 (L2 distance)
-RECOGNITION_THRESHOLD = 0.6
+# Recommended:
+# - dlib (L2 Distance): ~0.6
+# - facenet (Cosine Distance): ~0.4
+RECOGNITION_THRESHOLD = 0.4
 
 # --- YOLO Specific Config ---
 # Define the directory where models are stored
@@ -28,11 +29,13 @@ YOLO_MODELS = {
 }
 
 # The currently selected YOLO model file (Default)
+# CHANGED BACK TO MEDIUM (GPU IS ACTIVE NOW)
 YOLO_WEIGHTS = YOLO_MODELS["YOLOv8 Medium"]
 YOLO_CONFIDENCE = 0.5
 
 # --- Performance Tuning ---
 # Scale factor for video processing (0.1 to 1.0)
+# CHANGED BACK TO 1.0 (GPU IS ACTIVE NOW)
 PROCESSING_SCALE = 1.0
 
 # Image size for training
@@ -44,6 +47,12 @@ DB_PORT = "5433"
 DB_NAME = "postgres"
 DB_USER = "postgres"
 DB_PASS = "postgres_image_ymg3"
-
+DB_CONFIG = {
+    "host": DB_HOST,
+    "port": DB_PORT,
+    "dbname": DB_NAME,
+    "user": DB_USER,
+    "password": DB_PASS
+}
 # --- Encoding Model ---
 MODEL_NAME = "dlib_face_recognition"

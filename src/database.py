@@ -99,7 +99,7 @@ class Database:
                 ''')
 
                 # 3. Create Optimized Indexes (HNSW)
-                # Index for dlib
+                # Index for dlib (L2 distance)
                 cursor.execute("DROP INDEX IF EXISTS face_encodings_idx;")
                 cursor.execute(f'''
                     CREATE INDEX IF NOT EXISTS face_encodings_idx ON face_encodings 
@@ -107,11 +107,11 @@ class Database:
                     WITH (m = {INDEX_M}, ef_construction = {INDEX_EF});
                 ''')
                 
-                # Index for FaceNet
+                # Index for FaceNet (Cosine distance)
                 cursor.execute("DROP INDEX IF EXISTS face_encodings_facenet_idx;")
                 cursor.execute(f'''
                     CREATE INDEX IF NOT EXISTS face_encodings_facenet_idx ON face_encodings 
-                    USING hnsw (encoding_facenet vector_l2_ops) 
+                    USING hnsw (encoding_facenet vector_cosine_ops)
                     WITH (m = {INDEX_M}, ef_construction = {INDEX_EF});
                 ''')
                 

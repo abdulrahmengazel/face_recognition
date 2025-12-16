@@ -14,15 +14,20 @@ def add_new_face():
 
 def find_nearest_face_in_db(encoding_to_check):
     """Searches the database for the closest matching face using pgvector."""
-    # FIX: Use .tolist() for numpy arrays
     vec_str = str(encoding_to_check.tolist()) if hasattr(encoding_to_check, 'tolist') else str(encoding_to_check)
-    column_name = "encoding" if config.ENCODING_MODEL == "dlib" else f"encoding_{config.ENCODING_MODEL}"
     
+    if config.ENCODING_MODEL == "dlib":
+        column_name = "encoding"
+        distance_operator = "<->"  # L2 distance for dlib
+    else:
+        column_name = f"encoding_{config.ENCODING_MODEL}"
+        distance_operator = "<=>"  # Cosine distance for FaceNet
+
     with Database.get_conn() as conn:
         with conn.cursor() as cursor:
             try:
                 query = f"""
-                    SELECT p.name, f.{column_name} <-> %s AS distance
+                    SELECT p.name, f.{column_name} {distance_operator} %s AS distance
                     FROM people p
                     JOIN face_encodings f ON p.id = f.person_id
                     WHERE f.{column_name} IS NOT NULL
