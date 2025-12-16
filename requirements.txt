@@ -1,0 +1,21 @@
+
+# Core Libraries
+opencv-python
+face_recognition
+numpy
+
+# Database
+psycopg2-binary
+
+# YOLO (Detection)
+ultralytics
+
+# FaceNet (Recognition)
+deepface
+tf-keras # Required by deepface
+
+# GUI (Tkinter is built-in, but good to list dependencies)
+# pillow # Optional, if you want to display images in Tkinter better
+
+# Optional: Dlib with CUDA support (Manual install recommended)
+# dlib
