@@ -10,35 +10,30 @@ import config.settings as settings
 from core.detector import detect_faces
 from deepface import DeepFace
 
-# --- DATABASE & HELPER FUNCTIONS ---
+# --- COLOR PALETTE ---
+COLORS = {
+    "bg": "#344e41",
+    "frame": "#3a5a40",
+    "button": "#588157",
+    "hover": "#a3b18a",
+    "text": "#dad7cd"
+}
 
 def find_nearest_face_in_db(encoding_to_check, cursor):
-    """Searches the DB for the closest face using the correct column and distance operator."""
     try:
         vec_str = str(encoding_to_check.tolist()) if hasattr(encoding_to_check, 'tolist') else str(encoding_to_check)
         
         if settings.ENCODING_MODEL == "dlib":
-            column_name = "encoding"
-            distance_operator = "<->"
+            column_name, op = "encoding", "<->"
         else:
-            column_name = f"encoding_{settings.ENCODING_MODEL}"
-            distance_operator = "<=>"
+            column_name, op = f"encoding_{settings.ENCODING_MODEL}", "<=>"
 
-        query = f"""
-            SELECT p.name, f.{column_name} {distance_operator} %s AS distance
-            FROM people p JOIN face_encodings f ON p.id = f.person_id
-            WHERE f.{column_name} IS NOT NULL
-            ORDER BY distance ASC
-            LIMIT 1;
-        """
+        query = f"SELECT p.name, f.{column_name} {op} %s AS distance FROM people p JOIN face_encodings f ON p.id = f.person_id WHERE f.{column_name} IS NOT NULL ORDER BY distance ASC LIMIT 1;"
         cursor.execute(query, (vec_str,))
-        result = cursor.fetchone()
-        return result if result else (None, None)
+        return cursor.fetchone() or (None, None)
     except Exception as e:
         print(f"Database search error: {e}")
         return None, None
-
-# --- THREADING CLASSES ---
 
 class VideoStream:
     def __init__(self, src=0):
@@ -95,28 +90,26 @@ class FaceProcessingThread:
 
                         face_locations = detect_faces(rgb_frame, settings.FACE_DETECTION_MODEL, confidence=settings.YOLO_CONFIDENCE, yolo_weights=settings.YOLO_WEIGHTS)
                         
+                        encodings = []
                         if settings.ENCODING_MODEL == "dlib":
-                            face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
-                        else: # facenet
-                            face_encodings = []
+                            encodings = face_recognition.face_encodings(rgb_frame, face_locations)
+                        else:
                             for (top, right, bottom, left) in face_locations:
                                 face_img = rgb_frame[top:bottom, left:right]
                                 try:
                                     embedding_objs = DeepFace.represent(img_path=face_img, model_name='Facenet', enforce_detection=False)
-                                    if embedding_objs:
-                                        face_encodings.append(embedding_objs[0]['embedding'])
+                                    if embedding_objs: encodings.append(embedding_objs[0]['embedding'])
                                 except:
-                                    face_encodings.append(None)
+                                    encodings.append(None)
 
                         results = []
                         for i, location in enumerate(face_locations):
-                            face_encoding = face_encodings[i] if i < len(face_encodings) else None
+                            encoding = encodings[i] if i < len(encodings) else None
                             
-                            name = "UNKNOWN"
-                            color = (0, 0, 255)
+                            name, color = "UNKNOWN", (0, 0, 255)
 
-                            if face_encoding is not None:
-                                db_name, distance = find_nearest_face_in_db(face_encoding, cursor)
+                            if encoding is not None:
+                                db_name, distance = find_nearest_face_in_db(encoding, cursor)
                                 if db_name and distance < settings.RECOGNITION_THRESHOLD:
                                     name = f"{db_name.upper()} ({distance:.2f})"
                                     color = (0, 255, 0)
@@ -141,27 +134,26 @@ class FaceProcessingThread:
     def stop(self):
         self.stopped = True
 
-# --- MAIN APPLICATION LOGIC ---
-
 def run_video_app(parent_root):
     window = ctk.CTkToplevel(parent_root)
     window.title("Live Recognition")
-    window.geometry("400x200")
+    window.geometry("400x220")
     
     window.transient(parent_root)
     window.grab_set()
+    window.configure(fg_color=COLORS["bg"])
     window.grid_columnconfigure(0, weight=1)
 
     def start_recognition_program():
-        window.withdraw() # Hide the menu
+        window.withdraw()
         
-        video_stream = VideoStream(src=0).start()
+        video_stream = VideoStream(src=0)
         if not video_stream.stream.isOpened():
             messagebox.showerror("Camera Error", "Could not open webcam.")
-            window.deiconify() # Show the menu again
+            window.deiconify()
             return
         
-        print(f"Starting Face Recognition (Threshold: {settings.RECOGNITION_THRESHOLD})...")
+        video_stream.start()
         processor = FaceProcessingThread(video_stream).start()
 
         while True:
@@ -182,15 +174,17 @@ def run_video_app(parent_root):
         processor.stop()
         video_stream.stop()
         cv2.destroyAllWindows()
-        window.deiconify() # Show the menu again on exit
+        window.deiconify()
 
-    ctk.CTkLabel(window, text=f"Mode: {settings.ENCODING_MODEL.upper()} | Detection: {settings.FACE_DETECTION_MODEL.upper()}", font=ctk.CTkFont(size=12)).grid(row=0, column=0, pady=(10,5))
+    ctk.CTkLabel(window, text="Live Camera Recognition", font=ctk.CTkFont(size=16, weight="bold"), text_color=COLORS["text"]).grid(row=0, column=0, pady=(20,10))
+    ctk.CTkLabel(window, text=f"Using {settings.ENCODING_MODEL.upper()} & {settings.FACE_DETECTION_MODEL.upper()}", font=ctk.CTkFont(size=12), text_color=COLORS["hover"]).grid(row=1, column=0, pady=(0,20))
 
-    start_btn = ctk.CTkButton(window, text="Start Camera", command=start_recognition_program)
-    start_btn.grid(row=1, column=0, padx=20, pady=10, sticky="ew")
+    start_btn = ctk.CTkButton(window, text="Start Camera", command=start_recognition_program, height=40,
+                              fg_color=COLORS["button"], hover_color=COLORS["hover"], text_color=COLORS["text"])
+    start_btn.grid(row=2, column=0, padx=20, pady=10, sticky="ew")
 
-    quit_btn = ctk.CTkButton(window, text="Close", command=window.destroy, fg_color="transparent", border_width=2)
-    quit_btn.grid(row=2, column=0, padx=20, pady=10, sticky="ew")
+    quit_btn = ctk.CTkButton(window, text="Close", command=window.destroy, fg_color="transparent", border_width=1, border_color=COLORS["hover"])
+    quit_btn.grid(row=3, column=0, padx=20, pady=10, sticky="ew")
     
 if __name__ == "__main__":
     app = ctk.CTk()

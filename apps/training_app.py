@@ -11,6 +11,15 @@ import config.settings as settings
 from core.detector import detect_faces
 from deepface import DeepFace
 
+# --- COLOR PALETTE (from main.py) ---
+COLORS = {
+    "bg": "#344e41",
+    "frame": "#3a5a40",
+    "button": "#588157",
+    "hover": "#a3b18a",
+    "text": "#dad7cd"
+}
+
 def resize_image(image, target_size):
     height, width = image.shape[:2]
     scale = min(target_size[0] / width, target_size[1] / height)
@@ -19,13 +28,8 @@ def resize_image(image, target_size):
     return cv2.resize(image, (new_width, new_height))
 
 def get_encodings_for_image(image_rgb):
-    """
-    Gets both dlib and facenet encodings for a single image.
-    """
     dlib_enc = None
     facenet_enc = None
-
-    # Use the configured detector
     locs = detect_faces(image_rgb, settings.FACE_DETECTION_MODEL, confidence=settings.YOLO_CONFIDENCE, yolo_weights=settings.YOLO_WEIGHTS)
     
     if not locs:
@@ -33,12 +37,10 @@ def get_encodings_for_image(image_rgb):
 
     top, right, bottom, left = locs[0]
 
-    # 1. Get Dlib encoding
     dlib_encs = face_recognition.face_encodings(image_rgb, [locs[0]])
     if dlib_encs:
         dlib_enc = dlib_encs[0]
         
-    # 2. Get FaceNet encoding
     face_img = image_rgb[top:bottom, left:right]
     if face_img.shape[0] > 20 and face_img.shape[1] > 20:
         try:
@@ -51,21 +53,15 @@ def get_encodings_for_image(image_rgb):
     return dlib_enc, facenet_enc
 
 def train_model(training_dir="data/TrainingImages", progress_callback=None):
-    """
-    Scans images and saves encodings.
-    progress_callback: function(current_index, total_count, message)
-    """
     if not os.path.exists(training_dir):
         if progress_callback: progress_callback(0, 0, "Training directory not found!")
         return
 
     print(f"Starting Unified Training...")
-    
     Database.init_tables()
 
     with Database.get_conn() as conn:
         with conn.cursor() as cursor:
-            
             people = [d for d in os.listdir(training_dir) if os.path.isdir(os.path.join(training_dir, d))]
             total_people = len(people)
             
@@ -73,10 +69,7 @@ def train_model(training_dir="data/TrainingImages", progress_callback=None):
                 if progress_callback: progress_callback(0, 0, "No people found to train.")
                 return
 
-            saved_count = 0
-            
             for i, person_name in enumerate(people):
-                # Update Progress
                 if progress_callback:
                     progress_callback(i, total_people, f"Processing: {person_name}...")
 
@@ -103,11 +96,8 @@ def train_model(training_dir="data/TrainingImages", progress_callback=None):
                         
                         dlib_enc, facenet_enc = get_encodings_for_image(rgb)
                         
-                        if dlib_enc is not None:
-                            dlib_encodings.append(dlib_enc)
-                        if facenet_enc is not None:
-                            facenet_encodings.append(facenet_enc)
-
+                        if dlib_enc is not None: dlib_encodings.append(dlib_enc)
+                        if facenet_enc is not None: facenet_encodings.append(facenet_enc)
                     except Exception as e:
                         print(f"Error processing {img_path}: {e}")
 
@@ -121,47 +111,42 @@ def train_model(training_dir="data/TrainingImages", progress_callback=None):
                 existing_id = cursor.fetchone()
 
                 if existing_id:
-                    update_query = "UPDATE face_encodings SET encoding = %s::vector, encoding_facenet = %s::vector WHERE id = %s"
-                    cursor.execute(update_query, (dlib_vec_str, facenet_vec_str, existing_id[0]))
+                    cursor.execute("UPDATE face_encodings SET encoding = %s::vector, encoding_facenet = %s::vector WHERE id = %s", (dlib_vec_str, facenet_vec_str, existing_id[0]))
                 else:
-                    insert_query = "INSERT INTO face_encodings (person_id, model_name, encoding, encoding_facenet) VALUES (%s, %s, %s::vector, %s::vector)"
-                    cursor.execute(insert_query, (person_id, "multi-model", dlib_vec_str, facenet_vec_str))
+                    cursor.execute("INSERT INTO face_encodings (person_id, model_name, encoding, encoding_facenet) VALUES (%s, %s, %s::vector, %s::vector)", (person_id, "multi-model", dlib_vec_str, facenet_vec_str))
                 
                 conn.commit()
-                saved_count += 1
                 
-            # Final update
             if progress_callback:
                 progress_callback(total_people, total_people, "Training Completed!")
 
-    print(f"Training Finished. Processed {saved_count} people.")
+    print(f"Training Finished.")
 
 # --- GUI WRAPPER ---
 
 def run_training_gui(parent_root):
-    """
-    Opens a progress window and runs training in a separate thread.
-    """
     window = ctk.CTkToplevel(parent_root)
     window.title("Training Progress")
-    window.geometry("450x180")
+    window.geometry("500x200")
     window.transient(parent_root)
     window.grab_set()
+    window.configure(fg_color=COLORS["bg"])
     
     window.grid_columnconfigure(0, weight=1)
 
     # UI Elements
-    lbl_status = ctk.CTkLabel(window, text="Initializing...", font=ctk.CTkFont(size=14))
-    lbl_status.grid(row=0, column=0, padx=20, pady=(20, 10))
+    ctk.CTkLabel(window, text="Training in Progress...", font=ctk.CTkFont(size=16, weight="bold"), text_color=COLORS["text"]).grid(row=0, column=0, padx=20, pady=(20, 10))
+    
+    lbl_status = ctk.CTkLabel(window, text="Initializing...", font=ctk.CTkFont(size=12), text_color=COLORS["hover"])
+    lbl_status.grid(row=1, column=0, padx=20, pady=5)
 
-    progress_bar = ctk.CTkProgressBar(window, width=400)
+    progress_bar = ctk.CTkProgressBar(window, width=400, progress_color=COLORS["button"], fg_color=COLORS["frame"])
     progress_bar.set(0)
-    progress_bar.grid(row=1, column=0, padx=20, pady=10)
+    progress_bar.grid(row=2, column=0, padx=20, pady=10)
 
-    lbl_percent = ctk.CTkLabel(window, text="0%")
-    lbl_percent.grid(row=2, column=0, padx=20, pady=(0, 20))
+    lbl_percent = ctk.CTkLabel(window, text="0%", font=ctk.CTkFont(size=12), text_color=COLORS["text"])
+    lbl_percent.grid(row=3, column=0, padx=20, pady=(0, 20))
 
-    # Thread-safe callback
     def update_ui(current, total, message):
         def _update():
             if total > 0:
@@ -170,13 +155,12 @@ def run_training_gui(parent_root):
                 lbl_percent.configure(text=f"{int(percent*100)}%")
             lbl_status.configure(text=message)
             
-            if message == "Training Completed!":
+            if "Completed" in message:
                 messagebox.showinfo("Success", "Training finished successfully!")
                 window.destroy()
         
         window.after(0, _update)
 
-    # Run training in background thread
     def start_thread():
         try:
             train_model(progress_callback=update_ui)
@@ -185,8 +169,3 @@ def run_training_gui(parent_root):
             window.after(0, window.destroy)
 
     threading.Thread(target=start_thread, daemon=True).start()
-
-if __name__ == "__main__":
-    Database.initialize_pool()
-    train_model()
-    Database.close_all()

@@ -1,28 +1,24 @@
 # Shared Configuration
 import os
 
+# --- DYNAMIC PATH SETUP ---
+# Get the absolute path of the project's root directory
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
 # --- Encoding Model ---
-# Options: "dlib", "facenet"
 ENCODING_MODEL = "facenet"
 
 # --- Detection Model ---
-# Options: "hog", "cnn", "yolo"
 FACE_DETECTION_MODEL = "yolo"
 
 # --- Recognition Threshold ---
-# Distance threshold for matching faces.
-# Lower = Stricter (Less False Positives, More False Negatives)
-# Recommended:
-# - dlib (L2 Distance): ~0.6
-# - facenet (Cosine Distance): ~0.4
 RECOGNITION_THRESHOLD = 0.4
 
 # --- YOLO Specific Config ---
-# Define the directory where models are stored
-YOLO_DIR = "assets/yolo"
+# Use absolute path to avoid any ambiguity
+YOLO_DIR = os.path.join(PROJECT_ROOT, "assets", "yolo")
 
-# List of available YOLO models with their relative paths
-# CORRECTED: Use os.path.join to build paths correctly
+# List of available YOLO models with their absolute paths
 YOLO_MODELS = {
     "YOLOv8 Nano": os.path.join(YOLO_DIR, "yolov8n-face.pt"),
     "YOLOv8 Medium": os.path.join(YOLO_DIR, "yolov8m-face.pt"),
@@ -34,10 +30,7 @@ YOLO_WEIGHTS = YOLO_MODELS["YOLOv8 Medium"]
 YOLO_CONFIDENCE = 0.5
 
 # --- Performance Tuning ---
-# Scale factor for video processing (0.1 to 1.0)
 PROCESSING_SCALE = 1.0
-
-# Image size for training
 TRAINING_IMAGE_SIZE = (800, 800)
 
 # --- Database Config ---

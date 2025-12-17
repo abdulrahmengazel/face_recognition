@@ -10,118 +10,170 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 import config.settings as settings
 from core.database import Database
 
+# --- COLOR PALETTE ---
+COLORS = {
+    "bg": "#344e41",        # Darkest Green (Main Background)
+    "frame": "#3a5a40",     # Hunter Green (Card Background)
+    "button": "#588157",    # Fern Green (Primary Action)
+    "hover": "#a3b18a",     # Sage Green (Hover State)
+    "text": "#dad7cd",      # Light Beige (Text Color)
+    "accent": "#dad7cd"     # Accent Color
+}
+
 # --- THEME SETTINGS ---
-ctk.set_appearance_mode("Dark")  # Modes: "System" (standard), "Dark", "Light"
-ctk.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
+ctk.set_appearance_mode("Dark")
+ctk.set_default_color_theme("green") # Base theme
 
 class MainApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         
-        self.title("Face Recognition System - Main Menu")
-        self.geometry("600x700")
+        self.title("Face Recognition System")
+        self.geometry("700x800")
+        self.configure(fg_color=COLORS["bg"]) # Set Main Background
         
         Database.initialize_pool()
         
-        # --- UI Elements ---
+        # Fonts
+        self.header_font = ctk.CTkFont(family="Roboto", size=24, weight="bold")
+        self.sub_font = ctk.CTkFont(family="Roboto", size=16, weight="bold")
+        self.text_font = ctk.CTkFont(family="Roboto", size=14)
+        
+        # --- UI Layout ---
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        main_frame = ctk.CTkFrame(self, corner_radius=15)
-        main_frame.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
-        main_frame.grid_columnconfigure(0, weight=1)
+        # Main Container (Scrollable to fit small screens)
+        self.main_scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        self.main_scroll.grid(row=0, column=0, sticky="nsew", padx=0, pady=0)
+        self.main_scroll.grid_columnconfigure(0, weight=1)
 
-        # Title
-        title_label = ctk.CTkLabel(main_frame, text="Face Recognition System", font=ctk.CTkFont(size=24, weight="bold"))
-        title_label.grid(row=0, column=0, padx=20, pady=(20, 10))
-        
-        # --- Settings Section ---
-        settings_frame = ctk.CTkFrame(main_frame)
-        settings_frame.grid(row=1, column=0, padx=20, pady=10, sticky="ew")
-        settings_frame.grid_columnconfigure(1, weight=1)
+        # 1. Header Section
+        self.create_header()
 
-        ctk.CTkLabel(settings_frame, text="1. System Settings", font=ctk.CTkFont(size=16, weight="bold")).grid(row=0, column=0, columnspan=3, pady=(10, 5), sticky="w", padx=10)
+        # 2. Settings Card
+        self.create_settings_card()
 
-        # Encoding Model
-        ctk.CTkLabel(settings_frame, text="Encoding Model:").grid(row=1, column=0, sticky="w", padx=10, pady=5)
-        self.encoding_model_var = ctk.StringVar(value=settings.ENCODING_MODEL)
-        encoding_model_combo = ctk.CTkComboBox(settings_frame, variable=self.encoding_model_var, values=["dlib", "facenet"], state="readonly", command=self.update_settings)
-        encoding_model_combo.grid(row=1, column=1, sticky="ew", padx=10, pady=5)
+        # 3. Actions Card (Training & Apps)
+        self.create_actions_card()
 
-        # Detection Model
-        ctk.CTkLabel(settings_frame, text="Detection Model:").grid(row=2, column=0, sticky="w", padx=10, pady=5)
-        self.model_var = ctk.StringVar(value=settings.FACE_DETECTION_MODEL)
-        model_combo = ctk.CTkComboBox(settings_frame, variable=self.model_var, values=["cnn", "hog", "yolo"], state="readonly", command=self.update_settings)
-        model_combo.grid(row=2, column=1, sticky="ew", padx=10, pady=5)
-
-        # YOLO Model (Conditional)
-        self.yolo_label = ctk.CTkLabel(settings_frame, text="YOLO Version:")
-        self.yolo_model_var = ctk.StringVar(value="YOLOv8 Medium")
-        self.yolo_combo = ctk.CTkComboBox(settings_frame, variable=self.yolo_model_var, values=list(settings.YOLO_MODELS.keys()), state="readonly", command=self.update_settings)
-        
-        # Recognition Threshold
-        ctk.CTkLabel(settings_frame, text="Rec. Threshold:").grid(row=4, column=0, sticky="w", padx=10, pady=5)
-        self.threshold_label = ctk.CTkLabel(settings_frame, text=f"{settings.RECOGNITION_THRESHOLD:.2f}")
-        self.threshold_label.grid(row=4, column=2, sticky="w", padx=10, pady=5)
-        
-        self.threshold_slider = ctk.CTkSlider(settings_frame, from_=0.1, to=1.5, number_of_steps=14, command=self.update_threshold_label)
-        self.threshold_slider.set(settings.RECOGNITION_THRESHOLD)
-        self.threshold_slider.grid(row=4, column=1, sticky="ew", padx=10, pady=5)
-
-        # Video Scale
-        ctk.CTkLabel(settings_frame, text="Video Scale:").grid(row=5, column=0, sticky="w", padx=10, pady=5)
-        self.scale_label = ctk.CTkLabel(settings_frame, text=f"{settings.PROCESSING_SCALE:.2f}")
-        self.scale_label.grid(row=5, column=2, sticky="w", padx=10, pady=5)
-        
-        self.scale_slider = ctk.CTkSlider(settings_frame, from_=0.1, to=1.5, number_of_steps=14, command=self.update_scale_label)
-        self.scale_slider.set(settings.PROCESSING_SCALE)
-        self.scale_slider.grid(row=5, column=1, sticky="ew", padx=10, pady=5)
-
-        # Training Image Size (Simplified as Label for now, or Entry)
-        ctk.CTkLabel(settings_frame, text="Training Size:").grid(row=6, column=0, sticky="w", padx=10, pady=5)
-        self.train_size_entry = ctk.CTkEntry(settings_frame, placeholder_text="800")
-        self.train_size_entry.insert(0, str(settings.TRAINING_IMAGE_SIZE[0]))
-        self.train_size_entry.grid(row=6, column=1, sticky="ew", padx=10, pady=5)
-        
-        # Apply Button for Settings
-        apply_btn = ctk.CTkButton(settings_frame, text="Apply Settings", command=self.update_settings)
-        apply_btn.grid(row=7, column=0, columnspan=3, pady=10, padx=10, sticky="ew")
-
-        # --- Training Section ---
-        train_frame = ctk.CTkFrame(main_frame)
-        train_frame.grid(row=2, column=0, padx=20, pady=10, sticky="ew")
-        train_frame.grid_columnconfigure(0, weight=1)
-        
-        ctk.CTkLabel(train_frame, text="2. Training", font=ctk.CTkFont(size=16, weight="bold")).pack(anchor="w", padx=10, pady=(10, 5))
-        
-        train_btn = ctk.CTkButton(train_frame, text="Run Bulk Training", command=self.run_training, fg_color="#2CC985", hover_color="#229F69")
-        train_btn.pack(fill="x", padx=10, pady=10)
-
-        # --- Application Section ---
-        app_frame = ctk.CTkFrame(main_frame)
-        app_frame.grid(row=3, column=0, padx=20, pady=10, sticky="ew")
-        app_frame.grid_columnconfigure(0, weight=1)
-        
-        ctk.CTkLabel(app_frame, text="3. Applications", font=ctk.CTkFont(size=16, weight="bold")).pack(anchor="w", padx=10, pady=(10, 5))
-        
-        image_btn = ctk.CTkButton(app_frame, text="Image Recognition", command=self.run_image_mode)
-        image_btn.pack(fill="x", padx=10, pady=5)
-        
-        video_btn = ctk.CTkButton(app_frame, text="Live Video Recognition", command=self.run_video_mode, fg_color="#3B8ED0", hover_color="#36719F")
-        video_btn.pack(fill="x", padx=10, pady=10)
-
-        # --- Quit ---
-        quit_btn = ctk.CTkButton(main_frame, text="Exit", command=self.on_closing, fg_color="#C0392B", hover_color="#922B21")
-        quit_btn.grid(row=4, column=0, padx=20, pady=20, sticky="ew")
+        # 4. Footer
+        self.create_footer()
 
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.toggle_yolo_widget()
 
+    def create_header(self):
+        header_frame = ctk.CTkFrame(self.main_scroll, fg_color="transparent")
+        header_frame.grid(row=0, column=0, pady=(30, 20), sticky="ew")
+        
+        title = ctk.CTkLabel(
+            header_frame, 
+            text="Face Recognition System", 
+            font=self.header_font, 
+            text_color=COLORS["text"]
+        )
+        title.pack()
+        
+        subtitle = ctk.CTkLabel(
+            header_frame, 
+            text="Advanced AI-Powered Security", 
+            font=ctk.CTkFont(family="Roboto", size=12), 
+            text_color=COLORS["hover"]
+        )
+        subtitle.pack()
+
+    def create_settings_card(self):
+        card = ctk.CTkFrame(self.main_scroll, fg_color=COLORS["frame"], corner_radius=15)
+        card.grid(row=1, column=0, padx=30, pady=10, sticky="ew")
+        card.grid_columnconfigure(1, weight=1)
+
+        # Card Title
+        ctk.CTkLabel(card, text="⚙️ System Configuration", font=self.sub_font, text_color=COLORS["text"]).grid(row=0, column=0, columnspan=2, padx=20, pady=(15, 15), sticky="w")
+
+        # Encoding Model
+        ctk.CTkLabel(card, text="Encoding Model:", font=self.text_font, text_color=COLORS["text"]).grid(row=1, column=0, padx=20, pady=10, sticky="w")
+        self.encoding_model_var = ctk.StringVar(value=settings.ENCODING_MODEL)
+        enc_combo = ctk.CTkComboBox(card, variable=self.encoding_model_var, values=["dlib", "facenet"], 
+                                    fg_color=COLORS["bg"], button_color=COLORS["button"], button_hover_color=COLORS["hover"],
+                                    text_color=COLORS["text"], dropdown_fg_color=COLORS["frame"], command=self.update_settings)
+        enc_combo.grid(row=1, column=1, padx=20, pady=10, sticky="ew")
+
+        # Detection Model
+        ctk.CTkLabel(card, text="Detection Model:", font=self.text_font, text_color=COLORS["text"]).grid(row=2, column=0, padx=20, pady=10, sticky="w")
+        self.model_var = ctk.StringVar(value=settings.FACE_DETECTION_MODEL)
+        det_combo = ctk.CTkComboBox(card, variable=self.model_var, values=["cnn", "hog", "yolo"], 
+                                    fg_color=COLORS["bg"], button_color=COLORS["button"], button_hover_color=COLORS["hover"],
+                                    text_color=COLORS["text"], dropdown_fg_color=COLORS["frame"], command=self.update_settings)
+        det_combo.grid(row=2, column=1, padx=20, pady=10, sticky="ew")
+
+        # YOLO Version (Conditional)
+        self.yolo_label = ctk.CTkLabel(card, text="YOLO Version:", font=self.text_font, text_color=COLORS["text"])
+        self.yolo_model_var = ctk.StringVar(value="YOLOv8 Medium")
+        self.yolo_combo = ctk.CTkComboBox(card, variable=self.yolo_model_var, values=list(settings.YOLO_MODELS.keys()), 
+                                          fg_color=COLORS["bg"], button_color=COLORS["button"], button_hover_color=COLORS["hover"],
+                                          text_color=COLORS["text"], dropdown_fg_color=COLORS["frame"], command=self.update_settings)
+
+        # Threshold
+        ctk.CTkLabel(card, text="Sensitivity:", font=self.text_font, text_color=COLORS["text"]).grid(row=4, column=0, padx=20, pady=10, sticky="w")
+        self.threshold_slider = ctk.CTkSlider(card, from_=0.1, to=1.5, number_of_steps=14, command=self.update_threshold_label,
+                                              button_color=COLORS["button"], button_hover_color=COLORS["hover"], progress_color=COLORS["button"])
+        self.threshold_slider.set(settings.RECOGNITION_THRESHOLD)
+        self.threshold_slider.grid(row=4, column=1, padx=(20, 5), pady=10, sticky="ew")
+        
+        self.threshold_label = ctk.CTkLabel(card, text=f"{settings.RECOGNITION_THRESHOLD:.2f}", text_color=COLORS["text"], width=30)
+        self.threshold_label.grid(row=4, column=2, padx=(0, 20), pady=10)
+
+        # Video Scale
+        ctk.CTkLabel(card, text="Performance:", font=self.text_font, text_color=COLORS["text"]).grid(row=5, column=0, padx=20, pady=10, sticky="w")
+        self.scale_slider = ctk.CTkSlider(card, from_=0.1, to=1.0, number_of_steps=9, command=self.update_scale_label,
+                                          button_color=COLORS["button"], button_hover_color=COLORS["hover"], progress_color=COLORS["button"])
+        self.scale_slider.set(settings.PROCESSING_SCALE)
+        self.scale_slider.grid(row=5, column=1, padx=(20, 5), pady=10, sticky="ew")
+        
+        self.scale_label = ctk.CTkLabel(card, text=f"{settings.PROCESSING_SCALE:.2f}", text_color=COLORS["text"], width=30)
+        self.scale_label.grid(row=5, column=2, padx=(0, 20), pady=10)
+
+        # Apply Button
+        apply_btn = ctk.CTkButton(card, text="Apply Changes", command=self.update_settings, 
+                                  fg_color=COLORS["bg"], hover_color=COLORS["hover"], text_color=COLORS["text"], border_width=1, border_color=COLORS["text"])
+        apply_btn.grid(row=6, column=0, columnspan=3, padx=20, pady=20, sticky="ew")
+
+    def create_actions_card(self):
+        card = ctk.CTkFrame(self.main_scroll, fg_color=COLORS["frame"], corner_radius=15)
+        card.grid(row=2, column=0, padx=30, pady=10, sticky="ew")
+        card.grid_columnconfigure((0, 1), weight=1)
+
+        ctk.CTkLabel(card, text="🚀 Operations", font=self.sub_font, text_color=COLORS["text"]).grid(row=0, column=0, columnspan=2, padx=20, pady=(15, 15), sticky="w")
+
+        # Training Button
+        train_btn = ctk.CTkButton(card, text="Run Bulk Training", command=self.run_training, height=50,
+                                  fg_color=COLORS["button"], hover_color=COLORS["hover"], text_color=COLORS["text"], font=self.sub_font)
+        train_btn.grid(row=1, column=0, columnspan=2, padx=20, pady=10, sticky="ew")
+
+        # Image App Button
+        img_btn = ctk.CTkButton(card, text="Analyze Image", command=self.run_image_mode, height=50,
+                                fg_color=COLORS["bg"], hover_color=COLORS["hover"], text_color=COLORS["text"], font=self.sub_font)
+        img_btn.grid(row=2, column=0, padx=20, pady=10, sticky="ew")
+
+        # Video App Button
+        vid_btn = ctk.CTkButton(card, text="Live Camera", command=self.run_video_mode, height=50,
+                                fg_color=COLORS["bg"], hover_color=COLORS["hover"], text_color=COLORS["text"], font=self.sub_font)
+        vid_btn.grid(row=2, column=1, padx=20, pady=10, sticky="ew")
+
+    def create_footer(self):
+        footer_frame = ctk.CTkFrame(self.main_scroll, fg_color="transparent")
+        footer_frame.grid(row=3, column=0, pady=20, sticky="ew")
+        
+        quit_btn = ctk.CTkButton(footer_frame, text="Exit Application", command=self.on_closing, 
+                                 fg_color="#8B0000", hover_color="#A52A2A", text_color="white")
+        quit_btn.pack(ipadx=20)
+
+    # --- Logic Functions ---
     def toggle_yolo_widget(self):
-        """Shows or hides the YOLO model selection widget."""
         if self.model_var.get() == "yolo":
-            self.yolo_label.grid(row=3, column=0, sticky="w", padx=10, pady=5)
-            self.yolo_combo.grid(row=3, column=1, sticky="ew", padx=10, pady=5)
+            self.yolo_label.grid(row=3, column=0, padx=20, pady=10, sticky="w")
+            self.yolo_combo.grid(row=3, column=1, padx=20, pady=10, sticky="ew")
         else:
             self.yolo_label.grid_forget()
             self.yolo_combo.grid_forget()
@@ -133,51 +185,39 @@ class MainApp(ctk.CTk):
         self.scale_label.configure(text=f"{value:.2f}")
 
     def update_settings(self, event=None):
-        """Updates the shared config with the selected settings."""
         settings.ENCODING_MODEL = self.encoding_model_var.get()
         settings.FACE_DETECTION_MODEL = self.model_var.get()
-        
         selected_yolo_name = self.yolo_model_var.get()
         settings.YOLO_WEIGHTS = settings.YOLO_MODELS.get(selected_yolo_name, "assets/yolo/yolov8m-face.pt")
-        
         settings.RECOGNITION_THRESHOLD = round(self.threshold_slider.get(), 2)
         settings.PROCESSING_SCALE = round(self.scale_slider.get(), 2)
         
-        try:
-            size = int(self.train_size_entry.get())
-            settings.TRAINING_IMAGE_SIZE = (size, size)
-        except ValueError:
-            pass
-        
         self.toggle_yolo_widget()
-        print(f"Settings Updated: Encoding={settings.ENCODING_MODEL}, Detection={settings.FACE_DETECTION_MODEL}, Threshold={settings.RECOGNITION_THRESHOLD}")
+        print(f"Settings Updated: {settings.ENCODING_MODEL} | {settings.FACE_DETECTION_MODEL}")
 
     def run_training(self):
-        if messagebox.askyesno("Confirm", "This will scan the TrainingImages folder and update the database. Continue?"):
+        if messagebox.askyesno("Confirm", "Start training process?"):
             try:
                 from apps.training_app import run_training_gui
-                # Note: training_app uses standard tkinter, so we pass self (which is a CTk window)
-                # It should work fine as Toplevel
                 run_training_gui(self)
             except Exception as e:
-                messagebox.showerror("Error", f"Failed to start training: {e}")
+                messagebox.showerror("Error", f"Failed: {e}")
 
     def run_image_mode(self):
         try:
             from apps.image_app import run_image_app
             run_image_app(self)
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to start image app: {e}")
+            messagebox.showerror("Error", f"Failed: {e}")
 
     def run_video_mode(self):
         try:
             from apps.video_app import run_video_app
             run_video_app(self)
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to start video app: {e}")
+            messagebox.showerror("Error", f"Failed: {e}")
 
     def on_closing(self):
-        print("Closing database connections...")
         Database.close_all()
         self.destroy()
 
