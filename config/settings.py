@@ -19,7 +19,8 @@ RECOGNITION_THRESHOLD = 0.4
 
 # --- YOLO Specific Config ---
 # Define the directory where models are stored
-YOLO_DIR = "yolo"
+# UPDATED PATH
+YOLO_DIR = "assets/yolo"
 
 # List of available YOLO models with their relative paths
 YOLO_MODELS = {
@@ -29,13 +30,11 @@ YOLO_MODELS = {
 }
 
 # The currently selected YOLO model file (Default)
-# CHANGED BACK TO MEDIUM (GPU IS ACTIVE NOW)
 YOLO_WEIGHTS = YOLO_MODELS["YOLOv8 Medium"]
 YOLO_CONFIDENCE = 0.5
 
 # --- Performance Tuning ---
 # Scale factor for video processing (0.1 to 1.0)
-# CHANGED BACK TO 1.0 (GPU IS ACTIVE NOW)
 PROCESSING_SCALE = 1.0
 
 # Image size for training
