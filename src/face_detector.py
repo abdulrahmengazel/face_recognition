@@ -1,8 +1,8 @@
-import torch
 import face_recognition
 from ultralytics import YOLO
+import cv2
 import os
-
+import torch
 
 # --- MODEL LOADING ---
 # Keep track of the loaded model and its weights file
@@ -16,7 +16,6 @@ def load_yolo_model(weights_path):
     # Pre-check if the weights file exists
     if not os.path.exists(weights_path):
         print(f"Error: YOLO weights file not found at '{weights_path}'.")
-        # If the model was previously loaded, unload it to prevent using the wrong model
         if yolo_model is not None:
             yolo_model = None
             loaded_weights = None
@@ -34,29 +33,44 @@ def load_yolo_model(weights_path):
             yolo_model = None
             loaded_weights = None
 
-# --- DETECTION FUNCTION ---
+# --- STANDARD DETECTION FUNCTION (Returns Locations Only) ---
 
 def detect_faces(frame, model_name, confidence=0.5, yolo_weights='yolov8n.pt'):
     """
-    Detects faces in an image using the specified model.
     Returns a list of face locations in (top, right, bottom, left) format.
     """
+    results_with_score = detect_faces_with_score(frame, model_name, confidence, yolo_weights)
+    # Extract just the locations
+    return [loc for loc, score in results_with_score]
+
+# --- NEW FUNCTION: DETECTION WITH SCORE ---
+
+def detect_faces_with_score(frame, model_name, confidence=0.5, yolo_weights='yolov8n.pt'):
+    """
+    Detects faces and returns a list of tuples: ((top, right, bottom, left), score)
+    Score is between 0.0 and 1.0.
+    """
     if model_name == "hog":
-        return face_recognition.face_locations(frame, model="hog")
+        # HOG in face_recognition doesn't return a probability score easily. 
+        # If it finds a face, we assume high confidence.
+        locs = face_recognition.face_locations(frame, model="hog")
+        return [(loc, 1.0) for loc in locs]
     
     elif model_name == "cnn":
-        return face_recognition.face_locations(frame, model="cnn")
+        # CNN also returns locations.
+        locs = face_recognition.face_locations(frame, model="cnn")
+        return [(loc, 1.0) for loc in locs]
     
     elif model_name == "yolo":
         load_yolo_model(yolo_weights)
         
         if yolo_model is None:
-            return [] # Return empty if model failed to load
+            return []
 
         # Perform detection
         results = yolo_model(frame, stream=True, verbose=False)
         
-        face_locations = []
+        detections = []
         for r in results:
             boxes = r.boxes.cpu() 
             for box in boxes:
@@ -64,10 +78,13 @@ def detect_faces(frame, model_name, confidence=0.5, yolo_weights='yolov8n.pt'):
                 
                 if conf > confidence:
                     x1, y1, x2, y2 = box.xyxy[0].int().tolist()
-                    face_locations.append((y1, x2, y2, x1))
+                    # Convert to (top, right, bottom, left)
+                    loc = (y1, x2, y2, x1)
+                    detections.append((loc, conf))
         
-        return face_locations
+        return detections
     
     else:
         print(f"Warning: Unknown model '{model_name}'. Defaulting to HOG.")
-        return face_recognition.face_locations(frame, model="hog")
+        locs = face_recognition.face_locations(frame, model="hog")
+        return [(loc, 1.0) for loc in locs]
