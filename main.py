@@ -2,17 +2,13 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import sys
 import os
-import threading
 
-# Add src to path to allow imports
-sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+# Add project root to sys.path
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
-# Import ONLY lightweight modules initially
-import src.config as config
-from src.database import Database
-
-# NOTE: We removed the top-level imports of train, image_app, and video_app
-# to prevent "DLL Hell" (WinError 127) caused by loading PyTorch and TensorFlow simultaneously at startup.
+# Import lightweight modules
+import config.settings as settings
+from core.database import Database
 
 class MainApp:
     def __init__(self, root):
@@ -35,14 +31,14 @@ class MainApp:
 
         # Encoding Model Selection
         ttk.Label(settings_frame, text="Encoding Model:").grid(row=0, column=0, sticky="w", padx=5, pady=2)
-        self.encoding_model_var = tk.StringVar(value=config.ENCODING_MODEL)
+        self.encoding_model_var = tk.StringVar(value=settings.ENCODING_MODEL)
         encoding_model_combo = ttk.Combobox(settings_frame, textvariable=self.encoding_model_var, values=["dlib", "facenet"], state="readonly", width=15)
         encoding_model_combo.grid(row=0, column=1, sticky="w", padx=5, pady=2)
         encoding_model_combo.bind("<<ComboboxSelected>>", self.update_settings)
 
         # Detection Model Selection
         ttk.Label(settings_frame, text="Detection Model:").grid(row=1, column=0, sticky="w", padx=5, pady=2)
-        self.model_var = tk.StringVar(value=config.FACE_DETECTION_MODEL)
+        self.model_var = tk.StringVar(value=settings.FACE_DETECTION_MODEL)
         model_combo = ttk.Combobox(settings_frame, textvariable=self.model_var, values=["cnn", "hog", "yolo"], state="readonly", width=15)
         model_combo.grid(row=1, column=1, sticky="w", padx=5, pady=2)
         model_combo.bind("<<ComboboxSelected>>", self.update_settings)
@@ -50,28 +46,28 @@ class MainApp:
         # YOLO Model Selection (Conditional)
         self.yolo_label = ttk.Label(settings_frame, text="YOLO Version:")
         self.yolo_model_var = tk.StringVar(value="YOLOv8 Medium")
-        self.yolo_combo = ttk.Combobox(settings_frame, textvariable=self.yolo_model_var, values=list(config.YOLO_MODELS.keys()), state="readonly", width=15)
+        self.yolo_combo = ttk.Combobox(settings_frame, textvariable=self.yolo_model_var, values=list(settings.YOLO_MODELS.keys()), state="readonly", width=15)
         self.yolo_combo.bind("<<ComboboxSelected>>", self.update_settings)
         
         # Recognition Threshold
         ttk.Label(settings_frame, text="Rec. Threshold:").grid(row=3, column=0, sticky="w", padx=5, pady=2)
-        self.threshold_var = tk.DoubleVar(value=config.RECOGNITION_THRESHOLD)
+        self.threshold_var = tk.DoubleVar(value=settings.RECOGNITION_THRESHOLD)
         threshold_slider = ttk.Scale(settings_frame, from_=0.1, to=1.5, variable=self.threshold_var, orient="horizontal", command=self.update_settings)
         threshold_slider.grid(row=3, column=1, sticky="ew", padx=5, pady=2)
-        self.threshold_label = ttk.Label(settings_frame, text=f"{config.RECOGNITION_THRESHOLD:.2f}")
+        self.threshold_label = ttk.Label(settings_frame, text=f"{settings.RECOGNITION_THRESHOLD:.2f}")
         self.threshold_label.grid(row=3, column=2, sticky="w", padx=5, pady=2)
 
         # Video Scale
         ttk.Label(settings_frame, text="Video Scale:").grid(row=4, column=0, sticky="w", padx=5, pady=2)
-        self.scale_var = tk.DoubleVar(value=config.PROCESSING_SCALE)
+        self.scale_var = tk.DoubleVar(value=settings.PROCESSING_SCALE)
         scale_slider = ttk.Scale(settings_frame, from_=0.1, to=1.5, variable=self.scale_var, orient="horizontal", command=self.update_settings)
         scale_slider.grid(row=4, column=1, sticky="ew", padx=5, pady=2)
-        self.scale_label = ttk.Label(settings_frame, text=f"{config.PROCESSING_SCALE:.2f}")
+        self.scale_label = ttk.Label(settings_frame, text=f"{settings.PROCESSING_SCALE:.2f}")
         self.scale_label.grid(row=4, column=2, sticky="w", padx=5, pady=2)
 
         # Training Image Size
         ttk.Label(settings_frame, text="Training Size:").grid(row=5, column=0, sticky="w", padx=5, pady=2)
-        self.train_size_var = tk.IntVar(value=config.TRAINING_IMAGE_SIZE[0])
+        self.train_size_var = tk.IntVar(value=settings.TRAINING_IMAGE_SIZE[0])
         train_size_spinbox = ttk.Spinbox(settings_frame, from_=400, to=1200, increment=100, textvariable=self.train_size_var, width=8, command=self.update_settings)
         train_size_spinbox.grid(row=5, column=1, sticky="w", padx=5, pady=2)
 
@@ -111,27 +107,27 @@ class MainApp:
 
     def update_settings(self, event=None):
         """Updates the shared config with the selected settings."""
-        config.ENCODING_MODEL = self.encoding_model_var.get()
-        config.FACE_DETECTION_MODEL = self.model_var.get()
+        settings.ENCODING_MODEL = self.encoding_model_var.get()
+        settings.FACE_DETECTION_MODEL = self.model_var.get()
         
         selected_yolo_name = self.yolo_model_var.get()
-        config.YOLO_WEIGHTS = config.YOLO_MODELS.get(selected_yolo_name, "yolo/yolov8m-face.pt")
+        settings.YOLO_WEIGHTS = settings.YOLO_MODELS.get(selected_yolo_name, "yolo/yolov8m-face.pt")
         
-        config.RECOGNITION_THRESHOLD = round(self.threshold_var.get(), 2)
-        config.PROCESSING_SCALE = round(self.scale_var.get(), 2)
-        config.TRAINING_IMAGE_SIZE = (self.train_size_var.get(), self.train_size_var.get())
+        settings.RECOGNITION_THRESHOLD = round(self.threshold_var.get(), 2)
+        settings.PROCESSING_SCALE = round(self.scale_var.get(), 2)
+        settings.TRAINING_IMAGE_SIZE = (self.train_size_var.get(), self.train_size_var.get())
         
-        self.threshold_label.config(text=f"{config.RECOGNITION_THRESHOLD:.2f}")
-        self.scale_label.config(text=f"{config.PROCESSING_SCALE:.2f}")
+        self.threshold_label.config(text=f"{settings.RECOGNITION_THRESHOLD:.2f}")
+        self.scale_label.config(text=f"{settings.PROCESSING_SCALE:.2f}")
         self.toggle_yolo_widget()
         
-        print(f"Settings Updated: Encoding={config.ENCODING_MODEL}, Detection={config.FACE_DETECTION_MODEL}, Threshold={config.RECOGNITION_THRESHOLD}")
+        print(f"Settings Updated: Encoding={settings.ENCODING_MODEL}, Detection={settings.FACE_DETECTION_MODEL}, Threshold={settings.RECOGNITION_THRESHOLD}")
 
     def run_training(self):
         if messagebox.askyesno("Confirm", "This will scan the TrainingImages folder and update the database. Continue?"):
             try:
-                # Lazy Import: Load module only when needed
-                from src.train import run_training_gui
+                # Lazy Import
+                from apps.training_app import run_training_gui
                 run_training_gui(self.root)
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to start training: {e}")
@@ -139,7 +135,7 @@ class MainApp:
     def run_image_mode(self):
         try:
             # Lazy Import
-            from src.image_app import run_image_app
+            from apps.image_app import run_image_app
             run_image_app(self.root)
         except Exception as e:
             messagebox.showerror("Error", f"Failed to start image app: {e}")
@@ -147,7 +143,7 @@ class MainApp:
     def run_video_mode(self):
         try:
             # Lazy Import
-            from src.video_app import run_video_app
+            from apps.video_app import run_video_app
             run_video_app(self.root)
         except Exception as e:
             messagebox.showerror("Error", f"Failed to start video app: {e}")
