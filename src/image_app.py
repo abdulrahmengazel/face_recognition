@@ -82,7 +82,8 @@ def select_and_recognize_image():
             if encoding is not None:
                 db_name, distance = find_nearest_face_in_db(encoding)
                 if db_name and distance < config.RECOGNITION_THRESHOLD:
-                    name = db_name.upper()
+                    # SHOW NAME AND DISTANCE
+                    name = f"{db_name.upper()} ({distance:.2f})"
                     color = (0, 255, 0)
 
             cv2.rectangle(image_to_draw, (left, top), (right, bottom), color, 2)

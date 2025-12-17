@@ -1,8 +1,8 @@
+import torch
 import face_recognition
 from ultralytics import YOLO
-import cv2
 import os
-import torch
+
 
 # --- MODEL LOADING ---
 # Keep track of the loaded model and its weights file

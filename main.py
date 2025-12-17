@@ -7,18 +7,18 @@ import threading
 # Add src to path to allow imports
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
-# Import the shared config
+# Import ONLY lightweight modules initially
 import src.config as config
 from src.database import Database
-from src.train import run_training_gui  # <-- IMPORT THE NEW GUI FUNCTION
-from src.image_app import run_image_app
-from src.video_app import run_video_app
+
+# NOTE: We removed the top-level imports of train, image_app, and video_app
+# to prevent "DLL Hell" (WinError 127) caused by loading PyTorch and TensorFlow simultaneously at startup.
 
 class MainApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Face Recognition System - Main Menu")
-        self.root.geometry("500x650") # Increased height
+        self.root.geometry("500x650") 
         
         Database.initialize_pool()
         
@@ -128,19 +128,29 @@ class MainApp:
         print(f"Settings Updated: Encoding={config.ENCODING_MODEL}, Detection={config.FACE_DETECTION_MODEL}, Threshold={config.RECOGNITION_THRESHOLD}")
 
     def run_training(self):
-        # <-- UPDATED THIS FUNCTION
         if messagebox.askyesno("Confirm", "This will scan the TrainingImages folder and update the database. Continue?"):
             try:
-                # Call the new GUI function, passing the main window as the parent
+                # Lazy Import: Load module only when needed
+                from src.train import run_training_gui
                 run_training_gui(self.root)
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to start training: {e}")
 
     def run_image_mode(self):
-        run_image_app(self.root)
+        try:
+            # Lazy Import
+            from src.image_app import run_image_app
+            run_image_app(self.root)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to start image app: {e}")
 
     def run_video_mode(self):
-        run_video_app(self.root)
+        try:
+            # Lazy Import
+            from src.video_app import run_video_app
+            run_video_app(self.root)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to start video app: {e}")
 
     def on_closing(self):
         print("Closing database connections...")

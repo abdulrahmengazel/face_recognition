@@ -121,7 +121,8 @@ class FaceProcessingThread:
                             if face_encoding is not None:
                                 db_name, distance = find_nearest_face_in_db(face_encoding, cursor)
                                 if db_name and distance < config.RECOGNITION_THRESHOLD:
-                                    name = db_name.upper()
+                                    # SHOW NAME AND DISTANCE
+                                    name = f"{db_name.upper()} ({distance:.2f})"
                                     color = (0, 255, 0)
                             
                             top, right, bottom, left = location
