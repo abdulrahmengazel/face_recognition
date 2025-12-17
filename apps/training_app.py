@@ -3,8 +3,8 @@ import face_recognition
 import os
 import numpy as np
 import threading
-import tkinter as tk
-from tkinter import ttk, messagebox
+import customtkinter as ctk
+from tkinter import messagebox
 # Updated import paths
 from core.database import Database
 import config.settings as settings
@@ -142,39 +142,33 @@ def run_training_gui(parent_root):
     """
     Opens a progress window and runs training in a separate thread.
     """
-    window = tk.Toplevel(parent_root)
+    window = ctk.CTkToplevel(parent_root)
     window.title("Training Progress")
-    window.geometry("400x150")
+    window.geometry("450x180")
     window.transient(parent_root)
     window.grab_set()
     
-    # Center the window
-    window.update_idletasks()
-    width = window.winfo_width()
-    height = window.winfo_height()
-    x = (window.winfo_screenwidth() // 2) - (width // 2)
-    y = (window.winfo_screenheight() // 2) - (height // 2)
-    window.geometry(f'{width}x{height}+{x}+{y}')
+    window.grid_columnconfigure(0, weight=1)
 
     # UI Elements
-    lbl_status = ttk.Label(window, text="Initializing...", font=("Helvetica", 10))
-    lbl_status.pack(pady=(20, 10))
+    lbl_status = ctk.CTkLabel(window, text="Initializing...", font=ctk.CTkFont(size=14))
+    lbl_status.grid(row=0, column=0, padx=20, pady=(20, 10))
 
-    progress_var = tk.DoubleVar()
-    progress_bar = ttk.Progressbar(window, variable=progress_var, maximum=100)
-    progress_bar.pack(fill="x", padx=20, pady=10)
+    progress_bar = ctk.CTkProgressBar(window, width=400)
+    progress_bar.set(0)
+    progress_bar.grid(row=1, column=0, padx=20, pady=10)
 
-    lbl_percent = ttk.Label(window, text="0%")
-    lbl_percent.pack(pady=5)
+    lbl_percent = ctk.CTkLabel(window, text="0%")
+    lbl_percent.grid(row=2, column=0, padx=20, pady=(0, 20))
 
     # Thread-safe callback
     def update_ui(current, total, message):
         def _update():
             if total > 0:
-                percent = (current / total) * 100
-                progress_var.set(percent)
-                lbl_percent.config(text=f"{int(percent)}%")
-            lbl_status.config(text=message)
+                percent = current / total
+                progress_bar.set(percent)
+                lbl_percent.configure(text=f"{int(percent*100)}%")
+            lbl_status.configure(text=message)
             
             if message == "Training Completed!":
                 messagebox.showinfo("Success", "Training finished successfully!")

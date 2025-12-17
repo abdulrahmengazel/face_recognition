@@ -1,5 +1,5 @@
-import tkinter as tk
-from tkinter import filedialog, messagebox, ttk, simpledialog
+import customtkinter as ctk
+from tkinter import filedialog, messagebox
 import cv2
 import face_recognition
 # Updated import paths
@@ -46,7 +46,10 @@ def find_nearest_face_in_db(encoding_to_check):
 
 def select_and_recognize_image():
     """Handles image selection and recognition using pgvector."""
-    file_path = filedialog.askopenfilename()
+    file_path = filedialog.askopenfilename(
+        title="Select an Image",
+        filetypes=(("Image Files", "*.jpg *.jpeg *.png"), ("All files", "*.*"))
+    )
     if not file_path: return
 
     try:
@@ -83,11 +86,9 @@ def select_and_recognize_image():
         target_width = 800
         target_height = 600
         
-        # Calculate scale ratios
         scale_x = target_width / original_width
         scale_y = target_height / original_height
         
-        # Resize the image for display
         image_display = cv2.resize(image_bgr, (target_width, target_height))
 
         if not locations:
@@ -110,7 +111,6 @@ def select_and_recognize_image():
                     name = f"{db_name.upper()} ({distance:.2f})"
                     color = (0, 255, 0)
 
-            # Scale coordinates to match the resized image
             new_top = int(top * scale_y)
             new_bottom = int(bottom * scale_y)
             new_left = int(left * scale_x)
@@ -128,31 +128,25 @@ def select_and_recognize_image():
 
 def run_image_app(parent_root):
     """Creates the Image Recognition window as a child of the main app."""
-    window = tk.Toplevel(parent_root)
-    window.title(f"Image Recognition (Encoding: {settings.ENCODING_MODEL})")
-    window.geometry("400x250")
+    window = ctk.CTkToplevel(parent_root)
+    window.title(f"Image Recognition")
+    window.geometry("400x200")
     
     window.transient(parent_root)
     window.grab_set()
+    window.grid_columnconfigure(0, weight=1)
 
-    main_frame = ttk.Frame(window, padding="20")
-    main_frame.pack(expand=True, fill="both")
+    ctk.CTkLabel(window, text=f"Mode: {settings.ENCODING_MODEL.upper()}", font=ctk.CTkFont(size=14)).grid(row=0, column=0, pady=(10,5))
 
-    add_face_btn = ttk.Button(main_frame, text="Add New Face", command=add_new_face)
-    add_face_btn.pack(pady=10, fill="x")
+    recognize_btn = ctk.CTkButton(window, text="Recognize from Image", command=select_and_recognize_image)
+    recognize_btn.grid(row=1, column=0, padx=20, pady=10, sticky="ew")
 
-    recognize_btn = ttk.Button(main_frame, text="Recognize from Image", command=select_and_recognize_image)
-    recognize_btn.pack(pady=10, fill="x")
-
-    quit_btn = ttk.Button(main_frame, text="Close", command=window.destroy)
-    quit_btn.pack(pady=10, fill="x")
+    quit_btn = ctk.CTkButton(window, text="Close", command=window.destroy, fg_color="transparent", border_width=2)
+    quit_btn.grid(row=2, column=0, padx=20, pady=10, sticky="ew")
     
-    parent_root.wait_window(window)
-
 if __name__ == "__main__":
-    import numpy as np 
-    root = tk.Tk()
+    app = ctk.CTk()
     Database.initialize_pool()
-    run_image_app(root)
+    run_image_app(app)
+    app.mainloop()
     Database.close_all()
-    root.destroy()

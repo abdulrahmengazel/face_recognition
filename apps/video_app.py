@@ -1,8 +1,7 @@
-import tkinter as tk
-from tkinter import messagebox, filedialog, simpledialog, ttk
+import customtkinter as ctk
+from tkinter import messagebox
 import cv2
 import face_recognition
-from datetime import datetime
 from threading import Thread, Lock
 import time
 # Updated import paths
@@ -13,9 +12,6 @@ from deepface import DeepFace
 
 # --- DATABASE & HELPER FUNCTIONS ---
 
-def add_new_face():
-    messagebox.showinfo("Info", "Please use the 'Run Bulk Training' button in the main menu for adding new faces.")
-
 def find_nearest_face_in_db(encoding_to_check, cursor):
     """Searches the DB for the closest face using the correct column and distance operator."""
     try:
@@ -23,10 +19,10 @@ def find_nearest_face_in_db(encoding_to_check, cursor):
         
         if settings.ENCODING_MODEL == "dlib":
             column_name = "encoding"
-            distance_operator = "<->"  # L2 distance for dlib
+            distance_operator = "<->"
         else:
             column_name = f"encoding_{settings.ENCODING_MODEL}"
-            distance_operator = "<=>"  # Cosine distance for FaceNet
+            distance_operator = "<=>"
 
         query = f"""
             SELECT p.name, f.{column_name} {distance_operator} %s AS distance
@@ -122,7 +118,6 @@ class FaceProcessingThread:
                             if face_encoding is not None:
                                 db_name, distance = find_nearest_face_in_db(face_encoding, cursor)
                                 if db_name and distance < settings.RECOGNITION_THRESHOLD:
-                                    # SHOW NAME AND DISTANCE
                                     name = f"{db_name.upper()} ({distance:.2f})"
                                     color = (0, 255, 0)
                             
@@ -149,20 +144,21 @@ class FaceProcessingThread:
 # --- MAIN APPLICATION LOGIC ---
 
 def run_video_app(parent_root):
-    window = tk.Toplevel(parent_root)
-    window.title(f"Live Recognition (Encoding: {settings.ENCODING_MODEL}, Detection: {settings.FACE_DETECTION_MODEL})")
-    window.geometry("400x250")
+    window = ctk.CTkToplevel(parent_root)
+    window.title("Live Recognition")
+    window.geometry("400x200")
     
     window.transient(parent_root)
     window.grab_set()
-
-    main_frame = ttk.Frame(window, padding="20")
-    main_frame.pack(expand=True, fill="both")
+    window.grid_columnconfigure(0, weight=1)
 
     def start_recognition_program():
+        window.withdraw() # Hide the menu
+        
         video_stream = VideoStream(src=0).start()
-        if video_stream.stopped:
+        if not video_stream.stream.isOpened():
             messagebox.showerror("Camera Error", "Could not open webcam.")
+            window.deiconify() # Show the menu again
             return
         
         print(f"Starting Face Recognition (Threshold: {settings.RECOGNITION_THRESHOLD})...")
@@ -186,22 +182,19 @@ def run_video_app(parent_root):
         processor.stop()
         video_stream.stop()
         cv2.destroyAllWindows()
+        window.deiconify() # Show the menu again on exit
 
-    add_face_btn = ttk.Button(main_frame, text="Add New Face", command=add_new_face)
-    add_face_btn.pack(pady=10, fill="x")
+    ctk.CTkLabel(window, text=f"Mode: {settings.ENCODING_MODEL.upper()} | Detection: {settings.FACE_DETECTION_MODEL.upper()}", font=ctk.CTkFont(size=12)).grid(row=0, column=0, pady=(10,5))
 
-    start_btn = ttk.Button(main_frame, text="Start Camera", command=start_recognition_program)
-    start_btn.pack(pady=10, fill="x")
+    start_btn = ctk.CTkButton(window, text="Start Camera", command=start_recognition_program)
+    start_btn.grid(row=1, column=0, padx=20, pady=10, sticky="ew")
 
-    quit_btn = ttk.Button(main_frame, text="Close", command=window.destroy)
-    quit_btn.pack(pady=10, fill="x")
+    quit_btn = ctk.CTkButton(window, text="Close", command=window.destroy, fg_color="transparent", border_width=2)
+    quit_btn.grid(row=2, column=0, padx=20, pady=10, sticky="ew")
     
-    parent_root.wait_window(window)
-
 if __name__ == "__main__":
-    import numpy as np 
-    root = tk.Tk()
+    app = ctk.CTk()
     Database.initialize_pool()
-    run_video_app(root)
+    run_video_app(app)
+    app.mainloop()
     Database.close_all()
-    root.destroy()

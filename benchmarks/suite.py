@@ -1,42 +1,15 @@
 # -*- coding: utf-8 -*-
 """
 Yüz Tanıma Sistemi Karşılaştırma Raporu (Benchmark Suite)
-=========================================================
-
-Bu dosya, yüz tanıma sisteminin performansını ölçmek için iki mod sunar:
-1. Statik Test: TestImages klasöründeki resimler üzerinde toplu analiz ve grafikler.
-2. Canlı Test: Kamera üzerinden gerçek zamanlı tespit ve güven skoru (confidence score) analizi.
-
-Kullanılan Modellerin Tanımları:
---------------------------------
-
-### Yüz Tespit Modelleri (Detection Models) ###
-
-1.  **HOG (Histogram of Oriented Gradients):**
-    *   **Tanım:** Klasik bir makine öğrenmesi tekniğidir. CPU üzerinde çok hızlı çalışır 
-      ancak yüzleri farklı açılardan veya kötü ışıkta bulmakta zorlanabilir.
-
-2.  **CNN (Convolutional Neural Network):**
-    *   **Tanım:** Derin öğrenme tabanlı bir modeldir. Çok yüksek doğrulukla yüz bulur 
-      ancak CPU üzerinde çok yavaştır. Genellikle GPU gerektirir.
-
-3.  **YOLO (You Only Look Once):**
-    *   **Tanım:** Modern ve çok hızlı bir derin öğrenme modelidir. GPU üzerinde gerçek 
-      zamanlı çalışır ve yüksek doğruluk sunar.
-
-### Yüz Tanıma Modelleri (Recognition Models) ###
-
-1.  **dlib (ResNet tabanlı):**
-    *   **Tanım:** Yüzü 128 sayıdan oluşan bir vektöre (embedding) dönüştüren popüler 
-      bir modeldir. Genellikle L2 (Euclidean) mesafesi ile kullanılır.
-
-2.  **FaceNet:**
-    *   **Tanım:** Google tarafından geliştirilen ve çok yüksek doğruluk sunan bir modeldir. 
-      Yüzü 128 boyutlu bir vektöre dönüştürür ve genellikle Kosinüs (Cosine) 
-      mesafesi ile en iyi sonucu verir.
+GUI Versiyonu
 """
 
 import os
+# Suppress TensorFlow warnings
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+import tensorflow as tf
+tf.get_logger().setLevel('ERROR')
+
 import cv2
 import numpy as np
 import time
@@ -45,29 +18,50 @@ from sklearn.metrics import classification_report, accuracy_score, precision_rec
 import matplotlib.pyplot as plt
 import seaborn as sns
 import sys
-import tkinter as tk
-from tkinter import ttk, messagebox
+import threading
+import customtkinter as ctk
+from tkinter import messagebox
 
-# Updated import paths
+# --- DİNAMİK YOL AYARI ---
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(PROJECT_ROOT)
+
 from core.database import Database
 import config.settings as settings
 from core.detector import detect_faces, detect_faces_with_score
 from deepface import DeepFace
 import face_recognition
 
-# إعدادات العرض
+# Ayarlar
 sns.set_style("whitegrid")
 plt.rcParams['figure.figsize'] = (14, 8)
-
-# مجلد الاختبار
-TEST_DIR = "data/TestImages"
+TEST_DIR = os.path.join(PROJECT_ROOT, "data", "TestImages")
 
 # ==========================================
-# BÖLÜM 1: STATİK TEST FONKSİYONLARI
+# YARDIMCI SINIF: ÇIKTI YÖNLENDİRME (REDIRECT)
+# ==========================================
+class TextRedirector(object):
+    """Konsol çıktılarını (print) GUI'deki Textbox'a yönlendirir."""
+    def __init__(self, widget, tag="stdout"):
+        self.widget = widget
+        self.tag = tag
+
+    def write(self, str):
+        self.widget.configure(state="normal")
+        self.widget.insert("end", str, (self.tag,))
+        self.widget.see("end")
+        self.widget.configure(state="disabled")
+        # GUI'nin donmasını engellemek için update
+        self.widget.update_idletasks()
+
+    def flush(self):
+        pass
+
+# ==========================================
+# BÖLÜM 1: MANTIK FONKSİYONLARI (LOGIC)
 # ==========================================
 
 def run_detection_benchmark():
-    """HOG, CNN ve YOLO modellerini hız ve başarı oranı açısından karşılaştırır."""
     print("\n" + "="*40)
     print("AŞAMA 1: YÜZ TESPİT MODELLERİ KARŞILAŞTIRMASI")
     print("="*40)
@@ -84,15 +78,18 @@ def run_detection_benchmark():
                     all_images.append(os.path.join(root, file))
     
     if not all_images:
-        print("Hata: Test görseli bulunamadı!")
+        print(f"Hata: '{TEST_DIR}' klasöründe test görseli bulunamadı!")
         return None, None
 
     for model in models:
-        print(f"Testing Model: {model.upper()}...")
+        print(f"Model Test Ediliyor: {model.upper()}...")
         times = []
         success_count = 0
         
-        for img_path in all_images:
+        for i, img_path in enumerate(all_images):
+            # İlerleme göstergesi (basit)
+            if i % 5 == 0: print(f"  > İşleniyor... {i}/{len(all_images)}")
+            
             image = cv2.imread(img_path)
             if image is None: continue
             rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -125,7 +122,7 @@ def run_detection_benchmark():
             "Toplam Resim": len(all_images),
             "Bulunan Yüz": success_count
         })
-        print(f"  > {model.upper()}: {avg_time:.4f}s | Başarı: {success_rate:.1f}%")
+        print(f"  SONUÇ > {model.upper()}: {avg_time:.4f}s | Başarı: {success_rate:.1f}%")
 
     return pd.DataFrame(results), pd.DataFrame(raw_times_data)
 
@@ -221,10 +218,14 @@ def run_recognition_benchmark(model_name, cursor):
             
             y_true.append(true_name)
             y_pred.append(predicted_name)
+            
+            # print(f"  > {img_file}: {predicted_name}") # Çok fazla çıktı olmaması için kapattım
 
     accuracy = accuracy_score(y_true, y_pred)
     precision, recall, f1, _ = precision_recall_fscore_support(y_true, y_pred, average='weighted', zero_division=0)
     avg_time = np.mean(processing_times) if processing_times else 0
+    
+    print(f"  {model_name.upper()} Tamamlandı. Doğruluk: {accuracy:.2%}")
     
     return {
         "Model": model_name.upper(),
@@ -239,10 +240,10 @@ def run_recognition_benchmark(model_name, cursor):
     }
 
 def run_static_benchmark_suite():
-    # 1. Detection Benchmark
+    # Detection
     det_df, det_raw_times = run_detection_benchmark()
     
-    # 2. Recognition Benchmark
+    # Recognition
     print("\n" + "="*40)
     print("AŞAMA 2: YÜZ TANIMA MODELLERİ KARŞILAŞTIRMASI")
     print("="*40)
@@ -271,6 +272,10 @@ def run_static_benchmark_suite():
     Database.close_all()
     rec_df = pd.DataFrame(rec_results)
     rec_times_df = pd.DataFrame(rec_raw_times)
+
+    print("\n" + "="*40)
+    print("TEST TAMAMLANDI. GRAFİKLER HAZIRLANIYOR...")
+    print("="*40)
 
     # --- VISUALIZATION ---
     if det_raw_times is not None and not det_raw_times.empty:
@@ -321,36 +326,41 @@ def run_static_benchmark_suite():
 # ==========================================
 
 class CanliTespitUygulamasi:
-    def __init__(self):
-        self.root = tk.Tk()
-        self.root.title("Canlı Yüz Tespit Testi (Live Benchmark)")
-        self.root.geometry("400x250")
+    def __init__(self, parent_root=None):
+        if parent_root:
+            self.root = ctk.CTkToplevel(parent_root)
+            self.root.transient(parent_root)
+        else:
+            self.root = ctk.CTk()
+            
+        self.root.title("Canlı Yüz Tespit Testi")
+        self.root.geometry("400x300")
         
-        self.model_name = tk.StringVar(value="yolo")
+        self.model_name = ctk.StringVar(value="yolo")
         self.is_running = False
         
         self.create_widgets()
-        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
-        self.root.mainloop()
+        if not parent_root:
+            self.root.mainloop()
 
     def create_widgets(self):
-        main_frame = ttk.Frame(self.root, padding="20")
-        main_frame.pack(expand=True, fill="both")
-
-        ttk.Label(main_frame, text="Tespit Modeli Seçiniz:", font=("Helvetica", 10, "bold")).pack(pady=5)
+        self.root.grid_columnconfigure(0, weight=1)
+        
+        ctk.CTkLabel(self.root, text="Tespit Modeli Seçiniz:", font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=20, pady=(20,10))
         
         models = ["yolo", "hog", "cnn"]
-        for model in models:
-            ttk.Radiobutton(main_frame, text=model.upper(), variable=self.model_name, value=model).pack(anchor="w", padx=40)
+        for i, model in enumerate(models):
+            ctk.CTkRadioButton(self.root, text=model.upper(), variable=self.model_name, value=model).grid(row=i+1, column=0, padx=40, pady=5, sticky="w")
             
-        self.start_btn = ttk.Button(main_frame, text="Kamerayı Başlat", command=self.start_camera)
-        self.start_btn.pack(pady=20, fill="x")
+        self.start_btn = ctk.CTkButton(self.root, text="Kamerayı Başlat", command=self.start_camera)
+        self.start_btn.grid(row=len(models)+1, column=0, padx=20, pady=20, sticky="ew")
 
     def start_camera(self):
         if self.is_running: return
             
         self.is_running = True
-        self.start_btn.config(state="disabled")
+        self.start_btn.configure(state="disabled")
+        self.root.withdraw()
         
         selected_model = self.model_name.get()
         print(f"Kamera başlatılıyor... Model: {selected_model.upper()}")
@@ -359,7 +369,8 @@ class CanliTespitUygulamasi:
         if not cap.isOpened():
             messagebox.showerror("Hata", "Web kamerası açılamadı.")
             self.is_running = False
-            self.start_btn.config(state="normal")
+            self.start_btn.configure(state="normal")
+            self.root.deiconify()
             return
 
         prev_frame_time = 0
@@ -370,7 +381,6 @@ class CanliTespitUygulamasi:
 
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             
-            # Yeni fonksiyonu kullan (Skorlu tespit)
             detections = detect_faces_with_score(
                 rgb_frame, 
                 model_name=selected_model,
@@ -380,16 +390,12 @@ class CanliTespitUygulamasi:
 
             for (location, score) in detections:
                 top, right, bottom, left = location
-                
-                # Dikdörtgen çiz
                 cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
-                
-                # Skor yaz
                 text = f"Skor: {score:.2f}"
                 cv2.putText(frame, text, (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
             new_frame_time = time.time()
-            fps = 1 / (new_frame_time - prev_frame_time)
+            fps = 1 / (new_frame_time - prev_frame_time) if (new_frame_time - prev_frame_time) > 0 else 0
             prev_frame_time = new_frame_time
             cv2.putText(frame, f"FPS: {int(fps)}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
@@ -402,34 +408,71 @@ class CanliTespitUygulamasi:
         cv2.destroyAllWindows()
         self.is_running = False
         try:
-            self.start_btn.config(state="normal")
+            self.start_btn.configure(state="normal")
+            self.root.deiconify()
         except:
             pass
 
-    def on_closing(self):
-        self.is_running = False
-        self.root.destroy()
-
 # ==========================================
-# ANA MENÜ
+# ANA GUI UYGULAMASI (BENCHMARK APP)
 # ==========================================
 
-def main():
-    print("\n" + "="*50)
-    print("   YÜZ TANIMA SİSTEMİ - PERFORMANS TEST ARACI")
-    print("="*50)
-    print("1. Statik Test (Resim Klasörü Analizi)")
-    print("2. Canlı Test (Kamera ile Gerçek Zamanlı Analiz)")
-    print("="*50)
-    
-    choice = input("\nLütfen bir işlem seçiniz (1 veya 2): ").strip()
-    
-    if choice == '1':
-        run_static_benchmark_suite()
-    elif choice == '2':
-        CanliTespitUygulamasi()
-    else:
-        print("Geçersiz seçim. Program kapatılıyor.")
+class BenchmarkApp(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+        self.title("Benchmark Suite - Performans Testi")
+        self.geometry("800x600")
+        
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=1) # Log alanı genişlesin
+
+        # Başlık
+        ctk.CTkLabel(self, text="Yüz Tanıma Sistemi - Performans Test Aracı", font=ctk.CTkFont(size=20, weight="bold")).grid(row=0, column=0, pady=20)
+
+        # Log Alanı (Textbox)
+        self.log_box = ctk.CTkTextbox(self, font=("Consolas", 12))
+        self.log_box.grid(row=1, column=0, padx=20, pady=10, sticky="nsew")
+        self.log_box.configure(state="disabled")
+
+        # Butonlar Alanı
+        btn_frame = ctk.CTkFrame(self)
+        btn_frame.grid(row=2, column=0, padx=20, pady=20, sticky="ew")
+        btn_frame.grid_columnconfigure((0, 1), weight=1)
+
+        self.btn_static = ctk.CTkButton(btn_frame, text="1. Statik Test (Resim Klasörü)", command=self.start_static_test, height=40)
+        self.btn_static.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
+
+        self.btn_live = ctk.CTkButton(btn_frame, text="2. Canlı Test (Kamera)", command=self.start_live_test, height=40, fg_color="#E67E22", hover_color="#D35400")
+        self.btn_live.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
+
+        # Çıktı Yönlendirme
+        sys.stdout = TextRedirector(self.log_box)
+        sys.stderr = TextRedirector(self.log_box) # Hataları da yakala
+
+        print("Sistem hazır. Lütfen bir test seçiniz...")
+
+    def start_static_test(self):
+        self.btn_static.configure(state="disabled")
+        self.btn_live.configure(state="disabled")
+        print("\n--- Statik Test Başlatılıyor ---\n")
+        
+        # Thread içinde çalıştır ki GUI donmasın
+        threading.Thread(target=self._run_static_thread, daemon=True).start()
+
+    def _run_static_thread(self):
+        try:
+            run_static_benchmark_suite()
+        except Exception as e:
+            print(f"\nHATA OLUŞTU: {e}")
+        finally:
+            self.btn_static.configure(state="normal")
+            self.btn_live.configure(state="normal")
+            print("\n--- İşlem Tamamlandı ---")
+
+    def start_live_test(self):
+        # Canlı test zaten kendi penceresini açıyor
+        CanliTespitUygulamasi(self)
 
 if __name__ == "__main__":
-    main()
+    app = BenchmarkApp()
+    app.mainloop()

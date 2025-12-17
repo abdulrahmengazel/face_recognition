@@ -19,10 +19,10 @@ RECOGNITION_THRESHOLD = 0.4
 
 # --- YOLO Specific Config ---
 # Define the directory where models are stored
-# UPDATED PATH
 YOLO_DIR = "assets/yolo"
 
 # List of available YOLO models with their relative paths
+# CORRECTED: Use os.path.join to build paths correctly
 YOLO_MODELS = {
     "YOLOv8 Nano": os.path.join(YOLO_DIR, "yolov8n-face.pt"),
     "YOLOv8 Medium": os.path.join(YOLO_DIR, "yolov8m-face.pt"),
