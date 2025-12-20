@@ -1,106 +1,110 @@
-# Face Recognition System (Smart School API & GUI)
+# 🤖 Smart School Face Recognition System
 
-An end‑to‑end face recognition system with both a Tkinter GUI for desktop use and a FastAPI backend for mobile/web integration. It supports bulk training from a folder of images and multiple recognition modes: single image, live video (webcam), and REST API.
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.9+-blue.svg" alt="Python Version">
+  <img src="https://img.shields.io/badge/FastAPI-0.100.0+-009688.svg" alt="FastAPI Version">
+  <img src="https://img.shields.io/badge/PostgreSQL-15+-336791.svg" alt="PostgreSQL">
+  <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License">
+</p>
 
-## Features
+---
 
-- GUI main menu to configure and run the system
-- FastAPI REST API for integration with mobile apps and web platforms
-- Detection models: `hog`, `cnn`, and `yolo`
-- Encoding models: `dlib` and `facenet`
-- Selectable YOLO variants (weights placed under the `assets/yolo/` folder)
-- Adjustable recognition threshold, processing scale, and training image size
-- Bulk training from `data/TrainingImages/` (folder-per-person layout)
-- PostgreSQL database with `pgvector` for fast similarity search
+### 🌟 Overview
 
-## Quick Start
+An end-to-end, high-performance face recognition system designed for modern school management. It combines a **Tkinter-based Desktop GUI** for administrative tasks and a **FastAPI REST backend** for seamless mobile and web integration.
 
-1) Create and activate a virtual environment (recommended)
+Built with scalability in mind, the system leverages **PostgreSQL** with the **pgvector** extension for ultra-fast similarity searches, supporting thousands of identities with ease.
 
+---
+
+### 🚀 Key Features
+
+- **🖥️ Dual Interface:** Admin Desktop App (Tkinter) & Mobile-Ready API (FastAPI).
+- **🧠 Advanced AI Models:**
+  - **Detection:** HOG, CNN, and YOLOv8 support.
+  - **Recognition:** dlib and FaceNet embeddings.
+- **⚡ High Performance:** Database-driven similarity search using `pgvector`.
+- **📸 Flexible Recognition:** Supports static images, live webcam feeds, and bulk training.
+- **📊 Robust Benchmarking:** Built-in tools to evaluate model accuracy and speed.
+- **⚙️ Configurable:** Easily adjustable thresholds, scaling, and training parameters.
+
+---
+
+### 🛠️ Tech Stack
+
+- **Backend:** Python, FastAPI, Uvicorn
+- **GUI:** Tkinter, OpenCV
+- **AI/ML:** Ultralytics (YOLO), Face Recognition (dlib), DeepFace (FaceNet)
+- **Database:** PostgreSQL + `pgvector`
+- **Infrastructure:** CUDA/cuDNN support for GPU acceleration
+
+---
+
+### 📥 Quick Start
+
+#### 1. Environment Setup
 ```powershell
+# Create and activate virtual environment
 python -m venv .venv
 .\.venv\Scripts\activate
-```
 
-2) Install dependencies
-
-```powershell
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-3) (Optional) Validate your environment
-
-```powershell
-python benchmarks\check_gpu.py   # Checks GPU utilization
-```
-
-4) Prepare training data
-
-Place images in `data/TrainingImages/` using a folder-per-person structure:
-
-```
+#### 2. Prepare Training Data
+Organize your images in `data/TrainingImages/` using a folder-per-person structure:
+```text
 data/TrainingImages/
-  Alice/
-    img1.jpg
-    img2.jpg
-  Bob/
-    img1.jpg
+├── 👤 Alice/
+│   ├── img1.jpg
+│   └── img2.jpg
+└── 👤 Bob/
+    ├── img1.jpg
+    └── img2.jpg
 ```
 
-5) Run the Desktop App
-
+#### 3. Run the Desktop App
 ```powershell
 python main.py
 ```
+*Use the GUI to configure models, run bulk training, and test recognition.*
 
-In the GUI:
-- Choose encoding and detection models
-- Adjust threshold/scale/training size as needed
-- Click “Run Bulk Training” once your `TrainingImages/` are ready
-- Use “Image Recognition” to test on a still image
-- Use “Live Video Recognition” to run via webcam
-
-6) Run the API Server
-
+#### 4. Launch the API Server
 ```powershell
 python api.py
 ```
-The API will be available at `http://localhost:8000`. You can access the auto-generated documentation at `http://localhost:8000/docs`.
+*The API will be available at `http://localhost:8000`. Access docs at `/docs`.*
 
-## Project Layout
+---
 
-```
+### 📂 Project Structure
+
+```text
 PythonProject/
-  main.py                 # Tkinter main menu (Entry point)
-  api.py                  # FastAPI server for mobile/web integration
-  requirements.txt        # Project dependencies
-  PROJECT_STRUCTURE.md    # Detailed folder/file descriptions
-  apps/                   # GUI application logic (Training, Image, Video)
-  benchmarks/             # Performance testing and diagnostic scripts
-  config/                 # Global settings and configurations
-  core/                   # Core logic (Database, Face Detector)
-  data/                   # User data (Training and Test images)
-  assets/                 # Static assets (YOLO weights)
+├── 📱 api.py              # FastAPI server entry point
+├── 🖥️ main.py             # Desktop GUI entry point
+├── 📂 apps/               # GUI application modules
+├── 📂 assets/             # Static assets (YOLO weights)
+├── 📂 benchmarks/         # Performance testing scripts
+├── 📂 config/             # Global configurations
+├── 📂 core/               # Database & Detector logic
+└── 📂 data/               # Training & Test datasets
 ```
 
-## YOLO Weights
+---
 
-- Put your YOLO face detection `.pt` weights in the `assets/yolo/` directory.
-- The default weights are configured in `config/settings.py`.
+### 💡 Notes & Tips
 
-## Notes & Tips
+- **GPU Acceleration:** For YOLO and CNN models, ensure CUDA and cuDNN are correctly configured.
+- **Database:** Requires a PostgreSQL instance with the `pgvector` extension installed.
+- **YOLO Weights:** Place your `.pt` files in `assets/yolo/`.
+- **Troubleshooting:**
+  - *DLL Errors:* Install [Visual C++ Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe).
+  - *Database:* Check connection strings in `config/settings.py`.
 
-- Python version: 3.9–3.11 is recommended.
-- Database: Requires PostgreSQL with the `pgvector` extension.
-- GPU: Ensure CUDA/cuDNN are installed for GPU acceleration with YOLO or CNN models.
-- Threshold: Adjust the threshold in `config/settings.py` or via the GUI if you get too many false positives or misses.
+---
 
-## Troubleshooting
+### 📄 License
 
-- DLL load failures (Windows): Ensure Visual C++ Redistributable is installed.
-- Database Connection: Verify PostgreSQL credentials in `config/settings.py`.
-- Webcam not opening: Close other apps using the camera.
-
-## License
-
-This project’s license was not specified. Add your preferred license here.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
