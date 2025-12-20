@@ -13,7 +13,7 @@ import config.settings as settings
 from core.detector import detect_faces
 
 # Configuration
-TEST_DIR = "data/TestImages"
+TEST_DIR = "../data/TestImages"
 
 def run_detection_test():
     print("\n" + "="*50)
