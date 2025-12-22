@@ -1,0 +1,7 @@
+version: "2"
+authtoken: 376nQ8TQnGtI02KCoZ9IOTvgoSd_XpNUE82HeZSjXVdTjcdh
+tunnels:
+  smart-school:
+    proto: http
+    addr: 8000
+    inspect: true
