@@ -26,14 +26,31 @@ YOLO_MODELS = {
 }
 
 # The currently selected YOLO model file (Default)
-YOLO_WEIGHTS = YOLO_MODELS["YOLOv8 Medium"]
+# CHANGED: Switched from Medium to Large
+YOLO_WEIGHTS = YOLO_MODELS["YOLOv8 Large"] 
 YOLO_CONFIDENCE = 0.5
 
 # --- Performance Tuning ---
 PROCESSING_SCALE = 1.0
 TRAINING_IMAGE_SIZE = (800, 800)
 
-
+# --- Training Configuration (For Fine-tuning Models) ---
+TRAINING_CONFIG = {
+    "yolo": {
+        "epochs": 50,
+        "batch_size": 16,
+        "learning_rate": 0.01
+    },
+    "facenet": {
+        "epochs": 20,
+        "batch_size": 32,
+        "learning_rate": 0.001
+    },
+    "dlib": {
+        "epochs": 100,
+        "jitter": 10
+    }
+}
 
 # --- Database Config ---
 DB_HOST = "localhost"
