@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Yüz Tanıma Sistemi Karşılaştırma Raporu (Benchmark Suite)
-GUI Versiyonu - v2.0 (İyileştirilmiş ve Hata Ayıklanmış)
+GUI Versiyonu - v2.1 (Türkçe & Kamera Düzeltmesi)
 """
 
 import os
@@ -13,7 +13,7 @@ import cv2
 import numpy as np
 import time
 import pandas as pd
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support, confusion_matrix, roc_curve, auc
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support, confusion_matrix, roc_curve, auc, f1_score
 import matplotlib.pyplot as plt
 import seaborn as sns
 import sys
@@ -65,30 +65,35 @@ def plot_threshold_analysis(model_name, y_true, y_distances):
     print(f"  > {model_name} için Eşik Değeri Analizi yapılıyor...")
     thresholds = np.arange(0.1, 1.0, 0.05)
     accuracies = []
+    f1_scores = []
     
     for thresh in thresholds:
-        correct = 0
-        total = 0
+        y_pred_thresh = []
         for true_name, (pred_name, dist) in zip(y_true, y_distances):
-            if dist == float('inf'): continue
-            total += 1
+            if dist == float('inf'): 
+                y_pred_thresh.append("BİLİNMİYOR")
+                continue
             final_pred = pred_name if dist < thresh else "BİLİNMİYOR"
-            if final_pred == true_name:
-                correct += 1
-        accuracies.append(correct / total if total > 0 else 0)
+            y_pred_thresh.append(final_pred)
+        
+        acc = accuracy_score(y_true, y_pred_thresh)
+        f1 = f1_score(y_true, y_pred_thresh, average='weighted', zero_division=0)
+        accuracies.append(acc)
+        f1_scores.append(f1)
 
     plt.figure(figsize=(10, 5))
-    plt.plot(thresholds, accuracies, marker='o', linestyle='-', color=COLORS["accent2"], linewidth=2, label="Doğruluk")
+    plt.plot(thresholds, accuracies, marker='o', linestyle='-', color=COLORS["accent2"], linewidth=2, label="Doğruluk (Accuracy)")
+    plt.plot(thresholds, f1_scores, marker='s', linestyle='--', color=COLORS["accent1"], linewidth=2, label="F1 Skoru")
     plt.title(f'Eşik Değeri Analizi - {model_name}', color='white', fontsize=16)
     plt.xlabel('Eşik Değeri (Mesafe Limiti)', color='white')
-    plt.ylabel('Doğruluk (Accuracy)', color='white')
+    plt.ylabel('Skor', color='white')
     plt.grid(True, linestyle='--', alpha=0.3)
     
-    if accuracies:
-        best_idx = np.argmax(accuracies)
-        best_thresh, best_acc = thresholds[best_idx], accuracies[best_idx]
-        plt.axvline(best_thresh, color='red', linestyle='--', label=f'En İyi Eşik: {best_thresh:.2f}')
-        print(f"  > {model_name} İçin En İyi Eşik Değeri: {best_thresh:.2f} (Doğruluk: {best_acc:.2%})")
+    if f1_scores:
+        best_idx = np.argmax(f1_scores)
+        best_thresh, best_f1 = thresholds[best_idx], f1_scores[best_idx]
+        plt.axvline(best_thresh, color='red', linestyle='--', label=f'En İyi F1 Eşiği: {best_thresh:.2f}')
+        print(f"  > {model_name} İçin En İyi F1 Eşiği: {best_thresh:.2f} (F1: {best_f1:.2f})")
     
     plt.legend()
     plt.show()
@@ -131,7 +136,7 @@ def plot_confusion_matrix_heatmap(y_true, y_pred, model_name):
         
         plt.figure(figsize=(10, 8))
         sns.heatmap(cm, annot=True, fmt='d', cmap='Greens', xticklabels=labels, yticklabels=labels, cbar=False)
-        plt.title(f'Confusion Matrix - {model_name}', fontsize=16, color='white', pad=20)
+        plt.title(f'Karmaşıklık Matrisi (Confusion Matrix) - {model_name}', fontsize=16, color='white', pad=20)
         plt.xlabel('Tahmin Edilen', color='white', fontsize=12)
         plt.ylabel('Gerçek', color='white', fontsize=12)
         plt.xticks(rotation=45); plt.yticks(rotation=0)
@@ -253,6 +258,11 @@ def run_recognition_benchmark(model_name, cursor):
     
     accuracy = accuracy_score(y_true, y_pred)
     precision, recall, f1, _ = precision_recall_fscore_support(y_true, y_pred, average='weighted', zero_division=0)
+    
+    print(f"  > {model_name.upper()} Sonuçları:")
+    print(f"    Accuracy : {accuracy:.4f}")
+    print(f"    F1-Score : {f1:.4f}")
+    
     avg_time = np.mean(processing_times) if processing_times else 0
     return {"Model": model_name.upper(), "Accuracy": accuracy, "Precision": precision, "Recall": recall, "F1-Score": f1, "Ort. Süre (sn)": avg_time, "y_true": y_true, "y_pred": y_pred, "y_distances": y_distances, "raw_times": processing_times}
 
@@ -304,7 +314,10 @@ class CanliTespitUygulamasi:
         self.root.title("Canlı Yüz Tespit Testi"); self.root.geometry("400x300"); self.root.configure(fg_color=COLORS["bg"])
         self.model_name, self.is_running = ctk.StringVar(value="yolo"), False
         self.create_widgets()
+        # Pencere kapatıldığında düzgün çıkış yap
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
         if not parent_root: self.root.mainloop()
+
     def create_widgets(self):
         self.root.grid_columnconfigure(0, weight=1)
         ctk.CTkLabel(self.root, text="Tespit Modeli Seçiniz:", font=ctk.CTkFont(size=14, weight="bold"), text_color=COLORS["text"]).grid(row=0, column=0, padx=20, pady=(20,10))
@@ -312,34 +325,60 @@ class CanliTespitUygulamasi:
             ctk.CTkRadioButton(self.root, text=model.upper(), variable=self.model_name, value=model, text_color=COLORS["text"], fg_color=COLORS["button"], hover_color=COLORS["hover"]).grid(row=i+1, column=0, padx=40, pady=5, sticky="w")
         self.start_btn = ctk.CTkButton(self.root, text="Kamerayı Başlat", command=self.start_camera, fg_color=COLORS["button"], hover_color=COLORS["hover"], text_color=COLORS["text"])
         self.start_btn.grid(row=len(["yolo", "hog", "cnn"])+1, column=0, padx=20, pady=20, sticky="ew")
+        ctk.CTkLabel(self.root, text="Çıkmak için 'Q' tuşuna basınız.", text_color="gray").grid(row=len(["yolo", "hog", "cnn"])+2, column=0, pady=10)
+
     def start_camera(self):
         if self.is_running: return
         self.is_running, selected_model = True, self.model_name.get()
         self.start_btn.configure(state="disabled"); self.root.withdraw()
         print(f"Kamera başlatılıyor... Model: {selected_model.upper()}")
+        
         cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         if not cap.isOpened():
             messagebox.showerror("Hata", "Web kamerası açılamadı."); self.is_running = False; self.start_btn.configure(state="normal"); self.root.deiconify(); return
+        
         prev_frame_time = 0
         while self.is_running:
             ret, frame = cap.read()
             if not ret: break
+            
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             detections = detect_faces_with_score(rgb_frame, selected_model, 0.3, settings.YOLO_WEIGHTS)
+            
             for (location, score) in detections:
                 top, right, bottom, left = location
                 cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
                 cv2.putText(frame, f"Skor: {score:.2f}", (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            
             new_frame_time = time.time()
             fps = 1 / (new_frame_time - prev_frame_time) if (new_frame_time - prev_frame_time) > 0 else 0
             prev_frame_time = new_frame_time
+            
             cv2.putText(frame, f"FPS: {int(fps)}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            cv2.putText(frame, "Cikis: Q", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+            
             cv2.imshow(f"Canli Tespit - {selected_model.upper()}", frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'): break
-        cap.release(); cv2.destroyAllWindows(); self.is_running = False
-        try: self.start_btn.configure(state="normal"); self.root.deiconify()
+            
+            # Q tuşu kontrolü (Daha güvenli)
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord('q') or cv2.getWindowProperty(f"Canli Tespit - {selected_model.upper()}", cv2.WND_PROP_VISIBLE) < 1:
+                break
+        
+        # Temizlik işlemleri
+        cap.release()
+        cv2.destroyAllWindows()
+        self.is_running = False
+        
+        # Ana pencereyi geri getir
+        try: 
+            if self.root.winfo_exists():
+                self.start_btn.configure(state="normal")
+                self.root.deiconify()
         except: pass
-    def on_closing(self): self.is_running = False; self.root.destroy()
+
+    def on_closing(self): 
+        self.is_running = False
+        self.root.destroy()
 
 # ==========================================
 # ANA GUI UYGULAMASI

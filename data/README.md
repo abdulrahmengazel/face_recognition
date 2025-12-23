@@ -1,13 +1,13 @@
-# 📂 مجلد البيانات (Data)
+# 📂 Veri Klasörü (Data)
 
-هذا المجلد مخصص لتخزين الصور التي يعتمد عليها النظام.
+Bu klasör, sistemin dayandığı resimleri saklamak için ayrılmıştır.
 
-## 📂 المجلدات الفرعية
+## 📂 Alt Klasörler
 
 ### 1. `TrainingImages/`
-*   **الغرض:** ضع هنا صور الأشخاص الذين تريد تسجيلهم في النظام.
-*   **التسمية:** يفضل تسمية الملف باسم الشخص (مثال: `ahmed.jpg`, `sara.png`). سيقوم `training_app.py` باستخدام اسم الملف كاسم للطالب.
+*   **Amaç:** Sisteme kaydetmek istediğiniz kişilerin resimlerini buraya koyun.
+*   **İsimlendirme:** Dosyayı kişinin adıyla isimlendirmeniz önerilir (örneğin: `ahmed.jpg`, `sara.png`). `training_app.py`, dosya adını öğrenci adı olarak kullanacaktır.
 
 ### 2. `TestImages/`
-*   **الغرض:** ضع هنا صورًا عشوائية لاختبار دقة وسرعة النظام باستخدام سكربتات `benchmarks`.
-*   **حل المشكلة:** إذا ظهر لك خطأ `Error: No images found`، فهذا يعني أن هذا المجلد فارغ. قم بإضافة بعض الصور (jpg/png) هنا ليعمل الاختبار.
+*   **Amaç:** `benchmarks` betiklerini kullanarak sistemin doğruluğunu ve hızını test etmek için rastgele resimler koyun.
+*   **Sorun Çözümü:** Eğer `Error: No images found` hatası alırsanız, bu klasör boş demektir. Testin çalışması için buraya bazı resimler (.jpg/.png) ekleyin.

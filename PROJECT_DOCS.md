@@ -1,27 +1,27 @@
-# 📘 توثيق المشروع (Project Documentation)
+# 📘 Proje Dokümantasyonu (Project Documentation)
 
-هذا الملف يشرح الهيكلية العامة للمشروع والهدف من كل مجلد.
+Bu dosya, projenin genel yapısını ve her klasörün amacını açıklar.
 
-## 📂 هيكلية المجلدات
+## 📂 Klasör Yapısı
 
-### 1. `apps/` (التطبيقات)
-يحتوي على السكربتات الرئيسية لتشغيل النظام في أوضاع مختلفة (صور، فيديو، تدريب).
+### 1. `apps/` (Uygulamalar)
+Sistemi farklı modlarda (resim, video, eğitim) çalıştırmak için ana komut dosyalarını içerir.
 
-### 2. `benchmarks/` (اختبارات الأداء)
-يحتوي على أدوات لقياس سرعة ودقة النظام، واختبار توافقية الـ GPU.
-**ملاحظة:** الخطأ `Error: No images found in 'data/TestImages'` يظهر لأن مجلد الصور المخصص للاختبار فارغ.
+### 2. `benchmarks/` (Performans Testleri)
+Sistemin hızını ve doğruluğunu ölçmek ve GPU uyumluluğunu test etmek için araçlar içerir.
+**Not:** `Error: No images found in 'data/TestImages'` hatası alıyorsanız, test için ayrılan resim klasörü boş demektir.
 
-### 3. `config/` (الإعدادات)
-يحتوي على ملفات التكوين والمتغيرات الثابتة مثل إعدادات قاعدة البيانات ومسارات النماذج.
+### 3. `config/` (Ayarlar)
+Veritabanı ayarları ve model yolları gibi yapılandırma dosyalarını ve sabit değişkenleri içerir.
 
-### 4. `core/` (النواة)
-يحتوي على الكود الأساسي والمنطق البرمجي الذي تعتمد عليه باقي التطبيقات (قاعدة البيانات، كاشف الوجوه).
+### 4. `core/` (Çekirdek)
+Diğer uygulamaların dayandığı temel kodları ve iş mantığını (veritabanı, yüz dedektörü) içerir.
 
-### 5. `data/` (البيانات)
-المجلد المخصص لتخزين الصور المستخدمة في التدريب (Training) والاختبار (Testing).
+### 5. `data/` (Veri)
+Eğitim (Training) ve Test (Testing) için kullanılan resimlerin saklandığı klasördür.
 
-### 6. `assets/` (الموارد)
-يحتوي على نماذج الذكاء الاصطناعي المدربة مسبقًا (مثل `yolov8n-face.pt`).
+### 6. `assets/` (Kaynaklar)
+Önceden eğitilmiş yapay zeka modellerini (örneğin `yolov8n-face.pt`) içerir.
 
 ---
-للمزيد من التفاصيل حول كل جزء، راجع ملف `README.md` الموجود داخل كل مجلد فرعي.
+Her bölüm hakkında daha fazla ayrıntı için ilgili alt klasördeki `README.md` dosyasına bakın.

@@ -11,7 +11,7 @@ import config.settings as settings
 from core.detector import detect_faces
 from deepface import DeepFace
 
-# --- COLOR PALETTE (from main.py) ---
+# --- RENK PALETİ ---
 COLORS = {
     "bg": "#344e41",
     "frame": "#3a5a40",
@@ -54,10 +54,10 @@ def get_encodings_for_image(image_rgb):
 
 def train_model(training_dir="data/TrainingImages", progress_callback=None):
     if not os.path.exists(training_dir):
-        if progress_callback: progress_callback(0, 0, "Training directory not found!")
+        if progress_callback: progress_callback(0, 0, "Eğitim klasörü bulunamadı!")
         return
 
-    print(f"Starting Unified Training...")
+    print(f"Birleşik Eğitim Başlatılıyor...")
     Database.init_tables()
 
     with Database.get_conn() as conn:
@@ -66,12 +66,12 @@ def train_model(training_dir="data/TrainingImages", progress_callback=None):
             total_people = len(people)
             
             if total_people == 0:
-                if progress_callback: progress_callback(0, 0, "No people found to train.")
+                if progress_callback: progress_callback(0, 0, "Eğitilecek kişi bulunamadı.")
                 return
 
             for i, person_name in enumerate(people):
                 if progress_callback:
-                    progress_callback(i, total_people, f"Processing: {person_name}...")
+                    progress_callback(i, total_people, f"İşleniyor: {person_name}...")
 
                 person_path = os.path.join(training_dir, person_name)
                 
@@ -99,7 +99,7 @@ def train_model(training_dir="data/TrainingImages", progress_callback=None):
                         if dlib_enc is not None: dlib_encodings.append(dlib_enc)
                         if facenet_enc is not None: facenet_encodings.append(facenet_enc)
                     except Exception as e:
-                        print(f"Error processing {img_path}: {e}")
+                        print(f"Hata: {img_path} işlenemedi: {e}")
 
                 final_dlib_enc = np.mean(dlib_encodings, axis=0) if dlib_encodings else None
                 final_facenet_enc = np.mean(facenet_encodings, axis=0) if facenet_encodings else None
@@ -118,15 +118,15 @@ def train_model(training_dir="data/TrainingImages", progress_callback=None):
                 conn.commit()
                 
             if progress_callback:
-                progress_callback(total_people, total_people, "Training Completed!")
+                progress_callback(total_people, total_people, "Eğitim Tamamlandı!")
 
-    print(f"Training Finished.")
+    print(f"Eğitim Bitti.")
 
 # --- GUI WRAPPER ---
 
 def run_training_gui(parent_root):
     window = ctk.CTkToplevel(parent_root)
-    window.title("Training Progress")
+    window.title("Eğitim İlerlemesi")
     window.geometry("500x200")
     window.transient(parent_root)
     window.grab_set()
@@ -135,9 +135,9 @@ def run_training_gui(parent_root):
     window.grid_columnconfigure(0, weight=1)
 
     # UI Elements
-    ctk.CTkLabel(window, text="Training in Progress...", font=ctk.CTkFont(size=16, weight="bold"), text_color=COLORS["text"]).grid(row=0, column=0, padx=20, pady=(20, 10))
+    ctk.CTkLabel(window, text="Eğitim Devam Ediyor...", font=ctk.CTkFont(size=16, weight="bold"), text_color=COLORS["text"]).grid(row=0, column=0, padx=20, pady=(20, 10))
     
-    lbl_status = ctk.CTkLabel(window, text="Initializing...", font=ctk.CTkFont(size=12), text_color=COLORS["hover"])
+    lbl_status = ctk.CTkLabel(window, text="Başlatılıyor...", font=ctk.CTkFont(size=12), text_color=COLORS["hover"])
     lbl_status.grid(row=1, column=0, padx=20, pady=5)
 
     progress_bar = ctk.CTkProgressBar(window, width=400, progress_color=COLORS["button"], fg_color=COLORS["frame"])
@@ -155,8 +155,8 @@ def run_training_gui(parent_root):
                 lbl_percent.configure(text=f"{int(percent*100)}%")
             lbl_status.configure(text=message)
             
-            if "Completed" in message:
-                messagebox.showinfo("Success", "Training finished successfully!")
+            if "Tamamlandı" in message:
+                messagebox.showinfo("Başarılı", "Eğitim başarıyla tamamlandı!")
                 window.destroy()
         
         window.after(0, _update)
@@ -165,7 +165,7 @@ def run_training_gui(parent_root):
         try:
             train_model(progress_callback=update_ui)
         except Exception as e:
-            window.after(0, lambda: messagebox.showerror("Error", f"Training failed: {e}"))
+            window.after(0, lambda: messagebox.showerror("Hata", f"Eğitim başarısız oldu: {e}"))
             window.after(0, window.destroy)
 
     threading.Thread(target=start_thread, daemon=True).start()

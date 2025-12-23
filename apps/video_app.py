@@ -10,7 +10,7 @@ import config.settings as settings
 from core.detector import detect_faces
 from deepface import DeepFace
 
-# --- COLOR PALETTE ---
+# --- RENK PALETİ ---
 COLORS = {
     "bg": "#344e41",
     "frame": "#3a5a40",
@@ -32,7 +32,7 @@ def find_nearest_face_in_db(encoding_to_check, cursor):
         cursor.execute(query, (vec_str,))
         return cursor.fetchone() or (None, None)
     except Exception as e:
-        print(f"Database search error: {e}")
+        print(f"Veritabanı arama hatası: {e}")
         return None, None
 
 class VideoStream:
@@ -106,7 +106,7 @@ class FaceProcessingThread:
                         for i, location in enumerate(face_locations):
                             encoding = encodings[i] if i < len(encodings) else None
                             
-                            name, color = "UNKNOWN", (0, 0, 255)
+                            name, color = "BILINMIYOR", (0, 0, 255)
 
                             if encoding is not None:
                                 db_name, distance = find_nearest_face_in_db(encoding, cursor)
@@ -125,7 +125,7 @@ class FaceProcessingThread:
                             self.latest_results = results
                             
                     except Exception as e:
-                        print(f"Processing Error: {e}")
+                        print(f"İşleme Hatası: {e}")
 
     def get_results(self):
         with self.lock:
@@ -136,7 +136,7 @@ class FaceProcessingThread:
 
 def run_video_app(parent_root):
     window = ctk.CTkToplevel(parent_root)
-    window.title("Live Recognition")
+    window.title("Canlı Tanıma")
     window.geometry("400x220")
     
     window.transient(parent_root)
@@ -149,7 +149,7 @@ def run_video_app(parent_root):
         
         video_stream = VideoStream(src=0)
         if not video_stream.stream.isOpened():
-            messagebox.showerror("Camera Error", "Could not open webcam.")
+            messagebox.showerror("Kamera Hatası", "Web kamerası açılamadı.")
             window.deiconify()
             return
         
@@ -166,24 +166,32 @@ def run_video_app(parent_root):
                 cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
                 cv2.putText(frame, name, (left + 6, bottom - 6), cv2.FONT_HERSHEY_DUPLEX, 0.7, (255, 255, 255), 1)
 
-            cv2.imshow("Live Recognition", frame)
+            cv2.putText(frame, "Cikis: Q", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+            cv2.imshow("Canli Tanima", frame)
             
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+            # Q tuşu veya pencere kapatma kontrolü
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord('q') or cv2.getWindowProperty("Canli Tanima", cv2.WND_PROP_VISIBLE) < 1:
                 break
 
         processor.stop()
         video_stream.stop()
         cv2.destroyAllWindows()
-        window.deiconify()
+        
+        # Pencereyi geri getir
+        try:
+            if window.winfo_exists():
+                window.deiconify()
+        except: pass
 
-    ctk.CTkLabel(window, text="Live Camera Recognition", font=ctk.CTkFont(size=16, weight="bold"), text_color=COLORS["text"]).grid(row=0, column=0, pady=(20,10))
-    ctk.CTkLabel(window, text=f"Using {settings.ENCODING_MODEL.upper()} & {settings.FACE_DETECTION_MODEL.upper()}", font=ctk.CTkFont(size=12), text_color=COLORS["hover"]).grid(row=1, column=0, pady=(0,20))
+    ctk.CTkLabel(window, text="Canlı Kamera Tanıma", font=ctk.CTkFont(size=16, weight="bold"), text_color=COLORS["text"]).grid(row=0, column=0, pady=(20,10))
+    ctk.CTkLabel(window, text=f"{settings.ENCODING_MODEL.upper()} & {settings.FACE_DETECTION_MODEL.upper()} kullanılıyor", font=ctk.CTkFont(size=12), text_color=COLORS["hover"]).grid(row=1, column=0, pady=(0,20))
 
-    start_btn = ctk.CTkButton(window, text="Start Camera", command=start_recognition_program, height=40,
+    start_btn = ctk.CTkButton(window, text="Kamerayı Başlat", command=start_recognition_program, height=40,
                               fg_color=COLORS["button"], hover_color=COLORS["hover"], text_color=COLORS["text"])
     start_btn.grid(row=2, column=0, padx=20, pady=10, sticky="ew")
 
-    quit_btn = ctk.CTkButton(window, text="Close", command=window.destroy, fg_color="transparent", border_width=1, border_color=COLORS["hover"])
+    quit_btn = ctk.CTkButton(window, text="Kapat", command=window.destroy, fg_color="transparent", border_width=1, border_color=COLORS["hover"])
     quit_btn.grid(row=3, column=0, padx=20, pady=10, sticky="ew")
     
 if __name__ == "__main__":

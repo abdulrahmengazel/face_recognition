@@ -1,19 +1,19 @@
-# 📂 مجلد النواة (Core)
+# 📂 Çekirdek Klasörü (Core)
 
-يحتوي على المنطق البرمجي الأساسي (Business Logic) الذي تعتمد عليه التطبيقات.
+Uygulamaların dayandığı temel iş mantığını (Business Logic) içerir.
 
-## 📄 الملفات
+## 📄 Dosyalar
 
 ### 1. `database.py`
-*   **الوظيفة:** إدارة الاتصال بقاعدة بيانات PostgreSQL.
-*   **المهام:**
-    *   إنشاء مسبح الاتصالات (Connection Pool).
-    *   تنفيذ الاستعلامات (إدخال طلاب، البحث عن وجوه).
-    *   إدارة عمليات `pgvector`.
+*   **İşlev:** PostgreSQL veritabanı bağlantısını yönetir.
+*   **Görevler:**
+    *   Bağlantı havuzu (Connection Pool) oluşturma.
+    *   Sorguları yürütme (öğrenci ekleme, yüz arama).
+    *   `pgvector` işlemlerini yönetme.
 
 ### 2. `detector.py`
-*   **الوظيفة:** تغليف (Wrapper) لخوارزميات اكتشاف الوجوه.
-*   **المهام:**
-    *   تحميل نموذج YOLO.
-    *   توفير دالة موحدة `detect_faces` تقبل الصورة وترجع إحداثيات الوجوه.
-    *   التعامل مع تحويلات الصور اللازمة قبل الكشف.
+*   **İşlev:** Yüz tespit algoritmaları için bir sarmalayıcı (Wrapper).
+*   **Görevler:**
+    *   YOLO modelini yükleme.
+    *   Resmi kabul eden ve yüz koordinatlarını döndüren birleşik bir `detect_faces` fonksiyonu sağlama.
+    *   Tespit öncesi gerekli resim dönüşümlerini yapma.

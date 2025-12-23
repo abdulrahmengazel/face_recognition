@@ -1,20 +1,20 @@
-# 📂 مجلد اختبارات الأداء (Benchmarks)
+# 📂 Performans Testleri Klasörü (Benchmarks)
 
-يحتوي هذا المجلد على أدوات لقياس أداء النظام وسرعته.
+Bu klasör, sistemin performansını ve hızını ölçmek için araçlar içerir.
 
-## 📄 الملفات
+## 📄 Dosyalar
 
 ### 1. `check_gpu.py`
-*   **الوظيفة:** فحص ما إذا كانت مكتبات `torch` (لـ YOLO) و `dlib` تعمل على كرت الشاشة (GPU/CUDA) أم لا.
-*   **الأهمية:** التأكد من أن النظام يعمل بأقصى سرعة ممكنة.
+*   **İşlev:** `torch` (YOLO için) ve `dlib` kütüphanelerinin ekran kartı (GPU/CUDA) üzerinde çalışıp çalışmadığını kontrol eder.
+*   **Önemi:** Sistemin mümkün olan en yüksek hızda çalıştığından emin olmak.
 
 ### 2. `detection_only.py`
-*   **الوظيفة:** قياس سرعة اكتشاف الوجوه فقط (بدون التعرف عليها).
-*   **الهدف:** مقارنة سرعة YOLO مقابل HOG أو CNN.
+*   **İşlev:** Sadece yüz tespit hızını ölçer (tanıma işlemi olmadan).
+*   **Amaç:** YOLO'nun hızını HOG veya CNN ile karşılaştırmak.
 
 ### 3. `live_test.py`
-*   **الوظيفة:** اختبار النظام في بيئة حية (Live) لقياس عدد الإطارات في الثانية (FPS) أثناء المعالجة الكاملة.
+*   **İşlev:** Tam işlem sırasında saniyedeki kare sayısını (FPS) ölçmek için sistemi canlı ortamda (Live) test eder.
 
 ### 4. `suite.py`
-*   **الوظيفة:** تشغيل مجموعة اختبارات شاملة على مجلد `data/TestImages`.
-*   **ملاحظة:** يتطلب وجود صور في المجلد المذكور ليعمل، وإلا سيظهر الخطأ `Error: No images found`.
+*   **İşlev:** `data/TestImages` klasörü üzerinde kapsamlı testler çalıştırır.
+*   **Not:** Çalışması için belirtilen klasörde resimlerin olması gerekir, aksi takdirde `Error: No images found` hatası görünür.

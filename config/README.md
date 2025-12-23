@@ -1,13 +1,13 @@
-# 📂 مجلد الإعدادات (Config)
+# 📂 Ayarlar Klasörü (Config)
 
-يحتوي على ملفات التكوين المركزية للمشروع.
+Projenin merkezi yapılandırma dosyalarını içerir.
 
-## 📄 الملفات
+## 📄 Dosyalar
 
 ### 1. `settings.py`
-*   **الوظيفة:** يحتوي على جميع الثوابت والمتغيرات البيئية.
-*   **المحتويات:**
-    *   إعدادات الاتصال بقاعدة البيانات (DB_HOST, DB_USER, ...).
-    *   مسارات الملفات (مثل مسار نموذج YOLO).
-    *   إعدادات الكشف (مثل نسبة الثقة Confidence Threshold).
-    *   إعدادات Dlib (مثل استخدام CUDA).
+*   **İşlev:** Tüm sabitleri ve ortam değişkenlerini içerir.
+*   **İçerik:**
+    *   Veritabanı bağlantı ayarları (DB_HOST, DB_USER, ...).
+    *   Dosya yolları (örneğin YOLO model yolu).
+    *   Tespit ayarları (örneğin Güven Eşiği - Confidence Threshold).
+    *   Dlib ayarları (örneğin CUDA kullanımı).

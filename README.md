@@ -1,4 +1,4 @@
-# 🤖 Smart School Face Recognition System
+# 🤖 Akıllı Okul Yüz Tanıma Sistemi (Smart School Face Recognition System)
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.9+-blue.svg" alt="Python Version">
@@ -9,102 +9,102 @@
 
 ---
 
-### 🌟 Overview
+### 🌟 Genel Bakış (Overview)
 
-An end-to-end, high-performance face recognition system designed for modern school management. It combines a **Tkinter-based Desktop GUI** for administrative tasks and a **FastAPI REST backend** for seamless mobile and web integration.
+Modern okul yönetimi için tasarlanmış uçtan uca, yüksek performanslı bir yüz tanıma sistemi. İdari görevler için **Tkinter tabanlı Masaüstü GUI** ile mobil ve web entegrasyonu için **FastAPI REST arka ucunu** birleştirir.
 
-Built with scalability in mind, the system leverages **PostgreSQL** with the **pgvector** extension for ultra-fast similarity searches, supporting thousands of identities with ease.
-
----
-
-### 🚀 Key Features
-
-- **🖥️ Dual Interface:** Admin Desktop App (Tkinter) & Mobile-Ready API (FastAPI).
-- **🧠 Advanced AI Models:**
-  - **Detection:** HOG, CNN, and YOLOv8 support.
-  - **Recognition:** dlib and FaceNet embeddings.
-- **⚡ High Performance:** Database-driven similarity search using `pgvector`.
-- **📸 Flexible Recognition:** Supports static images, live webcam feeds, and bulk training.
-- **📊 Robust Benchmarking:** Built-in tools to evaluate model accuracy and speed.
-- **⚙️ Configurable:** Easily adjustable thresholds, scaling, and training parameters.
+Ölçeklenebilirlik göz önünde bulundurularak oluşturulan sistem, binlerce kimliği kolaylıkla destekleyen ultra hızlı benzerlik aramaları için **pgvector** uzantılı **PostgreSQL** kullanır.
 
 ---
 
-### 🛠️ Tech Stack
+### 🚀 Temel Özellikler
+
+- **🖥️ Çift Arayüz:** Yönetici Masaüstü Uygulaması (Tkinter) & Mobil Uyumlu API (FastAPI).
+- **🧠 Gelişmiş Yapay Zeka Modelleri:**
+  - **Tespit (Detection):** HOG, CNN ve YOLOv8 desteği.
+  - **Tanıma (Recognition):** dlib ve FaceNet gömüleri (embeddings).
+- **⚡ Yüksek Performans:** `pgvector` kullanarak veritabanı tabanlı benzerlik araması.
+- **📸 Esnek Tanıma:** Statik resimleri, canlı web kamerası akışlarını ve toplu eğitimi destekler.
+- **📊 Güçlü Performans Testleri:** Model doğruluğunu ve hızını değerlendirmek için yerleşik araçlar.
+- **⚙️ Yapılandırılabilir:** Kolayca ayarlanabilen eşik değerleri, ölçeklendirme ve eğitim parametreleri.
+
+---
+
+### 🛠️ Teknoloji Yığını (Tech Stack)
 
 - **Backend:** Python, FastAPI, Uvicorn
 - **GUI:** Tkinter, OpenCV
 - **AI/ML:** Ultralytics (YOLO), Face Recognition (dlib), DeepFace (FaceNet)
-- **Database:** PostgreSQL + `pgvector`
-- **Infrastructure:** CUDA/cuDNN support for GPU acceleration
+- **Veritabanı:** PostgreSQL + `pgvector`
+- **Altyapı:** GPU hızlandırması için CUDA/cuDNN desteği
 
 ---
 
-### 📥 Quick Start
+### 📥 Hızlı Başlangıç (Quick Start)
 
-#### 1. Environment Setup
+#### 1. Ortam Kurulumu
 ```powershell
-# Create and activate virtual environment
+# Sanal ortamı oluştur ve etkinleştir
 python -m venv .venv
 .\.venv\Scripts\activate
 
-# Install dependencies
+# Bağımlılıkları yükle
 pip install -r requirements.txt
 ```
 
-#### 2. Prepare Training Data
-Organize your images in `data/TrainingImages/` using a folder-per-person structure:
+#### 2. Eğitim Verilerini Hazırlama
+Resimlerinizi `data/TrainingImages/` içinde kişi başına bir klasör yapısı kullanarak düzenleyin:
 ```text
 data/TrainingImages/
-├── 👤 Alice/
+├── 👤 Ali/
 │   ├── img1.jpg
 │   └── img2.jpg
-└── 👤 Bob/
+└── 👤 Ayse/
     ├── img1.jpg
     └── img2.jpg
 ```
 
-#### 3. Run the Desktop App
+#### 3. Masaüstü Uygulamasını Çalıştırın
 ```powershell
 python main.py
 ```
-*Use the GUI to configure models, run bulk training, and test recognition.*
+*Modelleri yapılandırmak, toplu eğitim çalıştırmak ve tanımayı test etmek için GUI'yi kullanın.*
 
-#### 4. Launch the API Server
+#### 4. API Sunucusunu Başlatın
 ```powershell
 python api.py
 ```
-*The API will be available at `http://localhost:8000`. Access docs at `/docs`.*
+*API `http://localhost:8000` adresinde mevcut olacaktır. Dokümanlara `/docs` adresinden erişebilirsiniz.*
 
 ---
 
-### 📂 Project Structure
+### 📂 Proje Yapısı
 
 ```text
 PythonProject/
-├── 📱 api.py              # FastAPI server entry point
-├── 🖥️ main.py             # Desktop GUI entry point
-├── 📂 apps/               # GUI application modules
-├── 📂 assets/             # Static assets (YOLO weights)
-├── 📂 benchmarks/         # Performance testing scripts
-├── 📂 config/             # Global configurations
-├── 📂 core/               # Database & Detector logic
-└── 📂 data/               # Training & Test datasets
+├── 📱 api.py              # FastAPI sunucu giriş noktası
+├── 🖥️ main.py             # Masaüstü GUI giriş noktası
+├── 📂 apps/               # GUI uygulama modülleri
+├── 📂 assets/             # Statik varlıklar (YOLO ağırlıkları)
+├── 📂 benchmarks/         # Performans test betikleri
+├── 📂 config/             # Genel yapılandırmalar
+├── 📂 core/               # Veritabanı & Dedektör mantığı
+└── 📂 data/               # Eğitim & Test veri setleri
 ```
 
 ---
 
-### 💡 Notes & Tips
+### 💡 Notlar & İpuçları
 
-- **GPU Acceleration:** For YOLO and CNN models, ensure CUDA and cuDNN are correctly configured.
-- **Database:** Requires a PostgreSQL instance with the `pgvector` extension installed.
-- **YOLO Weights:** Place your `.pt` files in `assets/yolo/`.
-- **Troubleshooting:**
-  - *DLL Errors:* Install [Visual C++ Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe).
-  - *Database:* Check connection strings in `config/settings.py`.
+- **GPU Hızlandırma:** YOLO ve CNN modelleri için CUDA ve cuDNN'in doğru yapılandırıldığından emin olun.
+- **Veritabanı:** `pgvector` uzantısı yüklü bir PostgreSQL örneği gerektirir.
+- **YOLO Ağırlıkları:** `.pt` dosyalarınızı `assets/yolo/` içine yerleştirin.
+- **Sorun Giderme:**
+  - *DLL Hataları:* [Visual C++ Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe) yükleyin.
+  - *Veritabanı:* `config/settings.py` içindeki bağlantı dizelerini kontrol edin.
 
 ---
 
-### 📄 License
+### 📄 Lisans
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Bu proje MIT Lisansı altında lisanslanmıştır - ayrıntılar için [LICENSE](LICENSE) dosyasına bakın.
