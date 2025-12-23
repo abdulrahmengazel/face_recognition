@@ -33,6 +33,8 @@ YOLO_CONFIDENCE = 0.5
 PROCESSING_SCALE = 1.0
 TRAINING_IMAGE_SIZE = (800, 800)
 
+
+
 # --- Database Config ---
 DB_HOST = "localhost"
 DB_PORT = "5433"

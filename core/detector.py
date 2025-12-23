@@ -54,12 +54,12 @@ def detect_faces_with_score(frame, model_name, confidence=0.5, yolo_weights='yol
         # HOG in face_recognition doesn't return a probability score easily. 
         # If it finds a face, we assume high confidence.
         locs = face_recognition.face_locations(frame, model="hog")
-        return [(loc, 1.0) for loc in locs]
+        return [(loc, 0) for loc in locs]
     
     elif model_name == "cnn":
         # CNN also returns locations.
         locs = face_recognition.face_locations(frame, model="cnn")
-        return [(loc, 1.0) for loc in locs]
+        return [(loc, 0) for loc in locs]
     
     elif model_name == "yolo":
         load_yolo_model(yolo_weights)
