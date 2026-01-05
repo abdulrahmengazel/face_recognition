@@ -5,20 +5,15 @@ import numpy as np
 import threading
 import customtkinter as ctk
 from tkinter import messagebox
+import pickle
+from sklearn.neural_network import MLPClassifier
+from sklearn.preprocessing import LabelEncoder
+
 # Updated import paths
 from core.database import Database
 import config.settings as settings
 from core.detector import detect_faces
 from deepface import DeepFace
-
-# --- RENK PALETİ ---
-COLORS = {
-    "bg": "#344e41",
-    "frame": "#3a5a40",
-    "button": "#588157",
-    "hover": "#a3b18a",
-    "text": "#dad7cd"
-}
 
 def resize_image(image, target_size):
     height, width = image.shape[:2]
@@ -37,20 +32,90 @@ def get_encodings_for_image(image_rgb):
 
     top, right, bottom, left = locs[0]
 
-    dlib_encs = face_recognition.face_encodings(image_rgb, [locs[0]])
-    if dlib_encs:
-        dlib_enc = dlib_encs[0]
-        
-    face_img = image_rgb[top:bottom, left:right]
-    if face_img.shape[0] > 20 and face_img.shape[1] > 20:
-        try:
-            embedding_objs = DeepFace.represent(img_path=face_img, model_name='Facenet', enforce_detection=False)
-            if embedding_objs:
-                facenet_enc = np.array(embedding_objs[0]['embedding'])
-        except:
-            pass 
+    # --- DLIB ENCODING ---
+    if settings.ENCODING_MODEL == "dlib":
+        jitter = settings.TRAINING_CONFIG.get("dlib", {}).get("jitter", 1)
+        dlib_encs = face_recognition.face_encodings(image_rgb, [locs[0]], num_jitters=jitter)
+        if dlib_encs:
+            dlib_enc = dlib_encs[0]
+
+    # --- FACENET ENCODING ---
+    elif settings.ENCODING_MODEL == "facenet":
+        face_img = image_rgb[top:bottom, left:right]
+        if face_img.shape[0] > 20 and face_img.shape[1] > 20:
+            try:
+                embedding_objs = DeepFace.represent(img_path=face_img, model_name='Facenet', enforce_detection=False)
+                if embedding_objs:
+                    facenet_enc = np.array(embedding_objs[0]['embedding'])
+            except:
+                pass 
             
     return dlib_enc, facenet_enc
+
+
+def train_classifier(progress_callback=None):
+    """Trains an MLP Classifier on the stored embeddings."""
+    print("Training Classifier...")
+    if progress_callback: progress_callback(0, 0, "Sınıflandırıcı Eğitiliyor...")
+
+    X = []
+    y = []
+    names = {}
+
+    # Determine which column to fetch based on the selected model
+    if settings.ENCODING_MODEL == "dlib":
+        column_name = "encoding"
+    else:
+        column_name = "encoding_facenet"
+
+    with Database.get_conn() as conn:
+        with conn.cursor() as cursor:
+            # Fetch encodings ONLY for the selected model
+            query = f"""
+                SELECT p.name, f.{column_name} 
+                FROM face_encodings f 
+                JOIN people p ON f.person_id = p.id 
+                WHERE f.{column_name} IS NOT NULL
+            """
+            cursor.execute(query)
+            rows = cursor.fetchall()
+
+            for name, encoding_str in rows:
+                if encoding_str:
+                    try:
+                        clean_str = encoding_str.replace('[', '').replace(']', '')
+                        encoding = np.fromstring(clean_str, sep=',')
+                        if len(encoding) == 128:
+                            X.append(encoding)
+                            y.append(name)
+                    except Exception as e:
+                        print(f"Error parsing encoding for {name}: {e}")
+
+    if len(X) < 2:
+        print("Not enough data to train classifier (need at least 2 classes/samples).")
+        return
+
+    # Train MLP Classifier
+    clf_config = settings.TRAINING_CONFIG.get("classifier", {})
+    clf = MLPClassifier(
+        hidden_layer_sizes=clf_config.get("hidden_layers", (128, 64)),
+        max_iter=clf_config.get("max_iter", 500),
+        solver=clf_config.get("solver", "adam"),
+        random_state=42,
+        verbose=True
+    )
+
+    le = LabelEncoder()
+    y_encoded = le.fit_transform(y)
+
+    clf.fit(X, y_encoded)
+
+    # Save Model and Label Encoder
+    model_data = {"classifier": clf, "label_encoder": le}
+    with open(settings.CLASSIFIER_PATH, 'wb') as f:
+        pickle.dump(model_data, f)
+
+    print(f"Classifier saved to {settings.CLASSIFIER_PATH}")
 
 def train_model(training_dir="data/TrainingImages", progress_callback=None):
     if not os.path.exists(training_dir):
@@ -58,6 +123,21 @@ def train_model(training_dir="data/TrainingImages", progress_callback=None):
         return
 
     print(f"Birleşik Eğitim Başlatılıyor...")
+
+    # --- CONFIG LOGGING ---
+    yolo_cfg = settings.TRAINING_CONFIG.get("yolo", {})
+    facenet_cfg = settings.TRAINING_CONFIG.get("facenet", {})
+    dlib_cfg = settings.TRAINING_CONFIG.get("dlib", {})
+
+    print(f"--- Aktif Eğitim Parametreleri ---")
+    print(f"Model: {settings.ENCODING_MODEL.upper()}")
+    if settings.ENCODING_MODEL == "dlib":
+        print(f"[Dlib] Jitter (Tekrar Örnekleme): {dlib_cfg.get('jitter', 1)}")
+    elif settings.ENCODING_MODEL == "facenet":
+        print(
+            f"[FaceNet] Fine-Tuning Hedefi: Epochs={facenet_cfg.get('epochs')}, Batch={facenet_cfg.get('batch_size')}, LR={facenet_cfg.get('learning_rate')}")
+    print(f"----------------------------------")
+
     Database.init_tables()
 
     with Database.get_conn() as conn:
@@ -74,16 +154,23 @@ def train_model(training_dir="data/TrainingImages", progress_callback=None):
                     progress_callback(i, total_people, f"İşleniyor: {person_name}...")
 
                 person_path = os.path.join(training_dir, person_name)
-                
+
+                # Get or Create Person ID
                 cursor.execute("SELECT id FROM people WHERE name = %s;", (person_name,))
                 row = cursor.fetchone()
                 person_id = row[0] if row else cursor.execute("INSERT INTO people (name) VALUES (%s) RETURNING id;", (person_name,)) or cursor.fetchone()[0]
+
+                # --- CLEANUP OLD ENCODINGS FOR THIS MODEL ---
+                # We delete old encodings for this person/model to avoid duplicates or stale data
+                if settings.ENCODING_MODEL == "dlib":
+                    cursor.execute("DELETE FROM face_encodings WHERE person_id = %s AND encoding IS NOT NULL",
+                                   (person_id,))
+                else:
+                    cursor.execute("DELETE FROM face_encodings WHERE person_id = %s AND encoding_facenet IS NOT NULL",
+                                   (person_id,))
                 
                 images = [os.path.join(person_path, f) for f in os.listdir(person_path) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
                 
-                dlib_encodings = []
-                facenet_encodings = []
-
                 for img_path in images:
                     try:
                         with open(img_path, 'rb') as f:
@@ -95,28 +182,28 @@ def train_model(training_dir="data/TrainingImages", progress_callback=None):
                         rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                         
                         dlib_enc, facenet_enc = get_encodings_for_image(rgb)
-                        
-                        if dlib_enc is not None: dlib_encodings.append(dlib_enc)
-                        if facenet_enc is not None: facenet_encodings.append(facenet_enc)
+
+                        # --- INSERT INDIVIDUAL ENCODINGS ---
+                        if settings.ENCODING_MODEL == "dlib" and dlib_enc is not None:
+                            vec_str = str(dlib_enc.tolist())
+                            cursor.execute(
+                                "INSERT INTO face_encodings (person_id, model_name, encoding) VALUES (%s, %s, %s::vector)",
+                                (person_id, "dlib", vec_str))
+
+                        elif settings.ENCODING_MODEL == "facenet" and facenet_enc is not None:
+                            vec_str = str(facenet_enc.tolist())
+                            cursor.execute(
+                                "INSERT INTO face_encodings (person_id, model_name, encoding_facenet) VALUES (%s, %s, %s::vector)",
+                                (person_id, "facenet", vec_str))
+                            
                     except Exception as e:
                         print(f"Hata: {img_path} işlenemedi: {e}")
 
-                final_dlib_enc = np.mean(dlib_encodings, axis=0) if dlib_encodings else None
-                final_facenet_enc = np.mean(facenet_encodings, axis=0) if facenet_encodings else None
-
-                dlib_vec_str = str(final_dlib_enc.tolist()) if final_dlib_enc is not None else None
-                facenet_vec_str = str(final_facenet_enc.tolist()) if final_facenet_enc is not None else None
-
-                cursor.execute("SELECT id FROM face_encodings WHERE person_id = %s", (person_id,))
-                existing_id = cursor.fetchone()
-
-                if existing_id:
-                    cursor.execute("UPDATE face_encodings SET encoding = %s::vector, encoding_facenet = %s::vector WHERE id = %s", (dlib_vec_str, facenet_vec_str, existing_id[0]))
-                else:
-                    cursor.execute("INSERT INTO face_encodings (person_id, model_name, encoding, encoding_facenet) VALUES (%s, %s, %s::vector, %s::vector)", (person_id, "multi-model", dlib_vec_str, facenet_vec_str))
-                
                 conn.commit()
-                
+
+            # --- Train Classifier After Enrollment ---
+            train_classifier(progress_callback)
+
             if progress_callback:
                 progress_callback(total_people, total_people, "Eğitim Tamamlandı!")
 
@@ -130,21 +217,24 @@ def run_training_gui(parent_root):
     window.geometry("500x200")
     window.transient(parent_root)
     window.grab_set()
-    window.configure(fg_color=COLORS["bg"])
+    window.configure(fg_color=settings.UI_COLORS["bg"])
     
     window.grid_columnconfigure(0, weight=1)
 
     # UI Elements
-    ctk.CTkLabel(window, text="Eğitim Devam Ediyor...", font=ctk.CTkFont(size=16, weight="bold"), text_color=COLORS["text"]).grid(row=0, column=0, padx=20, pady=(20, 10))
-    
-    lbl_status = ctk.CTkLabel(window, text="Başlatılıyor...", font=ctk.CTkFont(size=12), text_color=COLORS["hover"])
+    ctk.CTkLabel(window, text="Eğitim Devam Ediyor...", font=ctk.CTkFont(size=16, weight="bold"),
+                 text_color=settings.UI_COLORS["text"]).grid(row=0, column=0, padx=20, pady=(20, 10))
+
+    lbl_status = ctk.CTkLabel(window, text="Başlatılıyor...", font=ctk.CTkFont(size=12),
+                              text_color=settings.UI_COLORS["hover"])
     lbl_status.grid(row=1, column=0, padx=20, pady=5)
 
-    progress_bar = ctk.CTkProgressBar(window, width=400, progress_color=COLORS["button"], fg_color=COLORS["frame"])
+    progress_bar = ctk.CTkProgressBar(window, width=400, progress_color=settings.UI_COLORS["button"],
+                                      fg_color=settings.UI_COLORS["frame"])
     progress_bar.set(0)
     progress_bar.grid(row=2, column=0, padx=20, pady=10)
 
-    lbl_percent = ctk.CTkLabel(window, text="0%", font=ctk.CTkFont(size=12), text_color=COLORS["text"])
+    lbl_percent = ctk.CTkLabel(window, text="0%", font=ctk.CTkFont(size=12), text_color=settings.UI_COLORS["text"])
     lbl_percent.grid(row=3, column=0, padx=20, pady=(0, 20))
 
     def update_ui(current, total, message):

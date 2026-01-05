@@ -16,6 +16,7 @@ from core.detector import detect_faces
 import face_recognition
 import config.settings as settings
 
+
 # --- Uygulama Yaşam Döngüsü (Başlatma & Kapatma) ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -24,6 +25,7 @@ async def lifespan(app: FastAPI):
     yield
     print("🛑 Sunucu Durduruluyor... Veritabanı Havuzu Kapatılıyor...")
     Database.close_all()
+
 
 # FastAPI Uygulamasını Başlat
 app = FastAPI(title="Akıllı Okul Yüz Tanıma API", lifespan=lifespan)
@@ -36,6 +38,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
 # ------------------------------------------
 
 # --- Yardımcı Fonksiyonlar ---
@@ -46,12 +50,12 @@ def get_face_encodings(image_rgb):
     """
     # 1. YOLO kullanarak yüzleri tespit et (GPU üzerinde En Hızlı & Hassas)
     locations = detect_faces(
-        image_rgb, 
-        model_name="yolo", 
-        confidence=0.5, 
+        image_rgb,
+        model_name="yolo",
+        confidence=0.5,
         yolo_weights=settings.YOLO_WEIGHTS
     )
-    
+
     if not locations:
         return []
 
@@ -59,6 +63,7 @@ def get_face_encodings(image_rgb):
     # Not: HOG ile tekrar tespit yapmamak için 'locations' parametresi verilir
     encodings = face_recognition.face_encodings(image_rgb, locations)
     return encodings
+
 
 def identify_student(encoding):
     """
@@ -71,30 +76,32 @@ def identify_student(encoding):
             with conn.cursor() as cursor:
                 # 0.5 mesafeden (Eşik Değeri) daha yakın olan en iyi eşleşmeyi bul
                 query = """
-                SELECT p.name, p.id 
-                FROM people p 
-                JOIN face_encodings f ON p.id = f.person_id 
-                WHERE f.encoding <-> %s < 0.5 
-                ORDER BY f.encoding <-> %s ASC 
-                LIMIT 1;
-                """
+                        SELECT p.name, p.id
+                        FROM people p
+                                 JOIN face_encodings f ON p.id = f.person_id
+                        WHERE f.encoding <-> %s < 0.4
+                        ORDER BY f.encoding <-> %s ASC
+                        LIMIT 1; \
+                        """
                 cursor.execute(query, (vec_str, vec_str))
                 result = cursor.fetchone()
-                
+
                 if result:
                     return {"name": result[0], "id": result[1], "status": "Mevcut"}
-                
+
                 return {"name": "Bilinmiyor", "id": None, "status": "Bilinmiyor"}
-                
+
     except Exception as e:
         print(f"❌ Veritabanı Hatası: {e}")
         return None
+
 
 # --- API Uç Noktaları (Endpoints) ---
 
 @app.get("/")
 def home():
     return {"message": "Akıllı Okul API, GPU Desteği ile Çalışıyor! 🚀"}
+
 
 @app.post("/scan-attendance")
 async def scan_attendance(file: UploadFile = File(...)):
@@ -110,7 +117,7 @@ async def scan_attendance(file: UploadFile = File(...)):
         contents = await file.read()
         nparr = np.frombuffer(contents, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        
+
         if img is None:
             raise HTTPException(status_code=400, detail="Geçersiz resim dosyası")
 
@@ -119,7 +126,7 @@ async def scan_attendance(file: UploadFile = File(...)):
 
         # 3. Resmi İşle
         encodings = get_face_encodings(rgb_img)
-        
+
         results = []
         if len(encodings) > 0:
             print(f"📸 {len(encodings)} yüz bulundu. Kimlik tespiti yapılıyor...")
@@ -140,6 +147,7 @@ async def scan_attendance(file: UploadFile = File(...)):
     except Exception as e:
         print(f"❌ İstek işlenirken hata oluştu: {e}")
         return {"success": False, "error": str(e)}
+
 
 # --- Giriş Noktası ---
 if __name__ == "__main__":

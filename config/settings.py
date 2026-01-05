@@ -5,6 +5,18 @@ import os
 # Get the absolute path of the project's root directory
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
+# --- UI THEME COLORS ---
+UI_COLORS = {
+    "bg": "#1d2d44",  # Dark Navy (Main Background)
+    "frame": "#3e5c76",  # Slate Blue (Card Background)
+    "button": "#748cab",  # Muted Blue (Primary Action)
+    "hover": "#5b7fa6",  # Slightly Darker/Richer Blue for Hover (Better Contrast with Cream Text)
+    "text": "#f0ebd8",  # Cream (Text Color)
+    "accent": "#748cab",  # Accent Color
+    "danger": "#8B0000",  # Red for danger/exit
+    "danger_hover": "#A52A2A"
+}
+
 # --- Encoding Model ---
 ENCODING_MODEL = "facenet"
 
@@ -26,18 +38,20 @@ YOLO_MODELS = {
 }
 
 # The currently selected YOLO model file (Default)
-# CHANGED: Switched from Medium to Large
-YOLO_WEIGHTS = YOLO_MODELS["YOLOv8 Large"] 
-YOLO_CONFIDENCE = 0.5
+YOLO_WEIGHTS = YOLO_MODELS["YOLOv8 Large"]
+YOLO_CONFIDENCE = 0.6
 
 # --- Performance Tuning ---
 PROCESSING_SCALE = 1.0
 TRAINING_IMAGE_SIZE = (800, 800)
 
+# --- Classifier Model Path ---
+CLASSIFIER_PATH = os.path.join(PROJECT_ROOT, "assets", "classifier.pkl")
+
 # --- Training Configuration (For Fine-tuning Models) ---
 TRAINING_CONFIG = {
     "yolo": {
-        "epochs": 50,
+        "epochs": 100,
         "batch_size": 16,
         "learning_rate": 0.01
     },
@@ -48,7 +62,16 @@ TRAINING_CONFIG = {
     },
     "dlib": {
         "epochs": 100,
-        "jitter": 10
+        "jitter": 1  # Reset to 1 for speed (since we store all encodings)
+    },
+    "detection": {
+        "hog_upsample": 1,  # Reset to 1 (Safe)
+        "cnn_upsample": 0  # Reset to 0 (Safe)
+    },
+    "classifier": {
+        "hidden_layers": (128, 64),
+        "max_iter": 500,
+        "solver": "adam"
     }
 }
 
@@ -65,5 +88,3 @@ DB_CONFIG = {
     "user": DB_USER,
     "password": DB_PASS
 }
-# --- Encoding Model ---
-MODEL_NAME = "dlib_face_recognition"

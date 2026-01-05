@@ -3,6 +3,7 @@ from ultralytics import YOLO
 import cv2
 import os
 import torch
+import config.settings as settings
 
 # --- MODEL LOADING ---
 # Keep track of the loaded model and its weights file
@@ -50,15 +51,20 @@ def detect_faces_with_score(frame, model_name, confidence=0.5, yolo_weights='yol
     Detects faces and returns a list of tuples: ((top, right, bottom, left), score)
     Score is between 0.0 and 1.0.
     """
+    # Get detection settings
+    det_config = settings.TRAINING_CONFIG.get("detection", {})
+    
     if model_name == "hog":
         # HOG in face_recognition doesn't return a probability score easily. 
         # If it finds a face, we assume high confidence.
-        locs = face_recognition.face_locations(frame, model="hog")
+        upsample = det_config.get("hog_upsample", 1)
+        locs = face_recognition.face_locations(frame, model="hog", number_of_times_to_upsample=upsample)
         return [(loc, 0) for loc in locs]
     
     elif model_name == "cnn":
         # CNN also returns locations.
-        locs = face_recognition.face_locations(frame, model="cnn")
+        upsample = det_config.get("cnn_upsample", 0)
+        locs = face_recognition.face_locations(frame, model="cnn", number_of_times_to_upsample=upsample)
         return [(loc, 0) for loc in locs]
     
     elif model_name == "yolo":

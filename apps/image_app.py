@@ -2,21 +2,62 @@ import customtkinter as ctk
 from tkinter import filedialog, messagebox
 import cv2
 import face_recognition
+import pickle
+import os
+import numpy as np
 # Updated import paths
 from core.database import Database
 import config.settings as settings
 from core.detector import detect_faces
 from deepface import DeepFace
-import numpy as np
 
-# --- RENK PALETİ ---
-COLORS = {
-    "bg": "#344e41",
-    "frame": "#3a5a40",
-    "button": "#588157",
-    "hover": "#a3b18a",
-    "text": "#dad7cd"
-}
+# --- CLASSIFIER LOADING ---
+classifier_model = None
+label_encoder = None
+
+
+def load_classifier():
+    global classifier_model, label_encoder
+    if os.path.exists(settings.CLASSIFIER_PATH):
+        try:
+            with open(settings.CLASSIFIER_PATH, 'rb') as f:
+                data = pickle.load(f)
+                classifier_model = data.get("classifier")
+                label_encoder = data.get("label_encoder")
+            print("Classifier loaded successfully.")
+        except Exception as e:
+            print(f"Failed to load classifier: {e}")
+            classifier_model = None
+            label_encoder = None
+    else:
+        print("Classifier file not found. Falling back to database search.")
+
+
+def predict_person(encoding):
+    """Predicts the person using the loaded classifier or falls back to DB."""
+    if classifier_model and label_encoder:
+        try:
+            # Reshape for single sample prediction
+            encoding_reshaped = encoding.reshape(1, -1)
+
+            # Get probabilities
+            probs = classifier_model.predict_proba(encoding_reshaped)[0]
+            best_idx = np.argmax(probs)
+            confidence = probs[best_idx]
+
+            # Invert confidence to match "distance" logic (lower is better for distance, higher is better for prob)
+            # We'll just return the name and (1 - confidence) as a pseudo-distance for compatibility
+            if confidence > 0.5:  # Threshold for classifier
+                name = label_encoder.inverse_transform([best_idx])[0]
+                return name, (1.0 - confidence)
+            else:
+                return None, 1.0
+        except Exception as e:
+            print(f"Prediction error: {e}")
+            return None, 1.0
+    else:
+        # Fallback to Database Search
+        return find_nearest_face_in_db(encoding)
 
 def find_nearest_face_in_db(encoding_to_check):
     vec_str = str(encoding_to_check.tolist()) if hasattr(encoding_to_check, 'tolist') else str(encoding_to_check)
@@ -82,9 +123,16 @@ def select_and_recognize_image():
                 name, color = "BILINMIYOR", (0, 0, 255)
                 
                 if encoding is not None:
-                    db_name, distance = find_nearest_face_in_db(encoding)
-                    if db_name and distance < settings.RECOGNITION_THRESHOLD:
-                        name = f"{db_name.upper()} ({distance:.2f})"
+                    # Use the new prediction logic
+                    db_name, score = predict_person(encoding)
+
+                    # Logic: If using classifier, score is (1-prob). If DB, score is distance.
+                    # Both cases: Lower is better/more confident match.
+                    threshold = 0.5 if classifier_model else settings.RECOGNITION_THRESHOLD
+
+                    if db_name and score < threshold:
+                        conf_display = f"{(1 - score) * 100:.1f}%" if classifier_model else f"{score:.2f}"
+                        name = f"{db_name.upper()} ({conf_display})"
                         color = (0, 255, 0)
 
                 new_top, new_bottom = int(top * scale_y), int(bottom * scale_y)
@@ -101,23 +149,35 @@ def select_and_recognize_image():
         messagebox.showerror("Hata", f"Resim işlenirken hata oluştu: {e}")
 
 def run_image_app(parent_root):
+    # Load classifier when app starts
+    load_classifier()
+    
     window = ctk.CTkToplevel(parent_root)
     window.title("Resim Tanıma")
     window.geometry("400x220")
     
     window.transient(parent_root)
     window.grab_set()
-    window.configure(fg_color=COLORS["bg"])
+    window.configure(fg_color=settings.UI_COLORS["bg"])
     window.grid_columnconfigure(0, weight=1)
 
-    ctk.CTkLabel(window, text="Resim Analizi", font=ctk.CTkFont(size=16, weight="bold"), text_color=COLORS["text"]).grid(row=0, column=0, pady=(20,10))
-    ctk.CTkLabel(window, text=f"{settings.ENCODING_MODEL.upper()} modeli kullanılıyor", font=ctk.CTkFont(size=12), text_color=COLORS["hover"]).grid(row=1, column=0, pady=(0,20))
+    ctk.CTkLabel(window, text="Resim Analizi", font=ctk.CTkFont(size=16, weight="bold"),
+                 text_color=settings.UI_COLORS["text"]).grid(row=0, column=0, pady=(20, 10))
+
+    model_text = f"{settings.ENCODING_MODEL.upper()} + Classifier" if classifier_model else f"{settings.ENCODING_MODEL.upper()} (DB Search)"
+    ctk.CTkLabel(window, text=model_text, font=ctk.CTkFont(size=12), text_color=settings.UI_COLORS["hover"]).grid(row=1,
+                                                                                                                  column=0,
+                                                                                                                  pady=(
+                                                                                                                      0,
+                                                                                                                      20))
 
     recognize_btn = ctk.CTkButton(window, text="Analiz İçin Resim Seç", command=select_and_recognize_image, height=40,
-                                  fg_color=COLORS["button"], hover_color=COLORS["hover"], text_color=COLORS["text"])
+                                  fg_color=settings.UI_COLORS["button"], hover_color=settings.UI_COLORS["hover"],
+                                  text_color=settings.UI_COLORS["text"])
     recognize_btn.grid(row=2, column=0, padx=20, pady=10, sticky="ew")
 
-    quit_btn = ctk.CTkButton(window, text="Kapat", command=window.destroy, fg_color="transparent", border_width=1, border_color=COLORS["hover"])
+    quit_btn = ctk.CTkButton(window, text="Kapat", command=window.destroy, fg_color="transparent", border_width=1,
+                             border_color=settings.UI_COLORS["hover"])
     quit_btn.grid(row=3, column=0, padx=20, pady=10, sticky="ew")
     
 if __name__ == "__main__":
