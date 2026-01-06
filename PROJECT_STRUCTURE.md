@@ -29,7 +29,6 @@ Bu aşama, ham piksellerden oluşan görüntülerin, yapay zekanın anlayabilece
 * **Filtreleme:** Sadece güven skoru `%50` (0.5) üzerinde olan yüzler işleme alınır.
 
 #### C. Özellik Çıkarımı (Feature Extraction / Embedding)
-
 Tespit edilen yüz bölgesi kesilir ve seçilen modele gönderilir:
 
 * **FaceNet (Google):** Yüzü 128 boyutlu bir hiper-küre (hypersphere) üzerinde bir noktaya eşler.
@@ -66,29 +65,18 @@ oluşturma sürecidir.
     * Bu işlem, verilerin ortalamasını 0, varyansını 1 yapar. Sinir ağlarının (Neural Networks) yakınsaması (
       convergence) için zorunludur.
 
-#### B. Model Seçimi ve Eğitimi
-
-Kullanıcı tercihine göre iki modelden biri eğitilir:
-
-**Seçenek 1: MLP Classifier (Multi-Layer Perceptron)**
+#### B. Model Eğitimi: MLP Classifier (Multi-Layer Perceptron)
 
 * **Mimari:** Derin Yapay Sinir Ağı.
     * **Girdi Katmanı:** 128 Nöron (Yüz vektörü).
     * **Gizli Katmanlar:** 1024 -> 512 -> 256 Nöron (ReLU aktivasyon fonksiyonu ile).
     * **Çıktı Katmanı:** Sınıf sayısı kadar nöron (Softmax aktivasyonu ile olasılık dağılımı).
 * **Optimizasyon:** `Adam` algoritması, ağırlıkları güncelleyerek hatayı (Log-Loss) minimize eder.
-* **Avantajı:** Karmaşık, doğrusal olmayan ilişkileri çok iyi öğrenir.
-
-**Seçenek 2: XGBoost (eXtreme Gradient Boosting)**
-
-* **Mimari:** Karar Ağaçları (Decision Trees) topluluğu.
-* **Yöntem:** Hataları ardışık olarak düzelten yüzlerce ağaç oluşturur.
-* **Avantajı:** Tablo yapısındaki verilerde (vektörler gibi) çok hızlıdır ve aşırı öğrenmeye (overfitting) karşı
-  dirençlidir.
+* **Avantajı:** Karmaşık, doğrusal olmayan ilişkileri çok iyi öğrenir ve yüz tanıma için en kararlı sonuçları verir.
 
 #### C. Doğrulama (Validation)
 
-* Veri seti `%90 Eğitim`, `%10 Doğrulama` olarak ayrılır.
+* Veri seti `%90 Eğitim`, `%10 Doğrulama` olarak ayrılır (eğer yeterli veri varsa).
 * Eğitim sırasında modelin performansı (Loss değeri) canlı olarak izlenir.
 
 #### D. Serileştirme (Serialization)
@@ -114,13 +102,12 @@ yaptığı andır.
 
 #### B. Tahmin (Prediction)
 
-Model (MLP veya XGBoost), normalize edilmiş vektörü alır ve bir olasılık dizisi döndürür:
+Model (MLP), normalize edilmiş vektörü alır ve bir olasılık dizisi döndürür:
 
 * `[0.01, 0.98, 0.01]` -> Bu, %98 ihtimalle 1. indeksteki kişi demektir.
 * **Güven Eşiği (Threshold):** Eğer en yüksek olasılık `%30` (0.3) altındaysa, sonuç reddedilir ve "BİLİNMİYOR" yazılır.
 
 #### C. Yüz Takibi ve Stabilizasyon (Face Tracking & Smoothing)
-
 Video akışındaki titremeyi önlemek için özel bir algoritma çalışır:
 
 1. **Eşleştirme (Matching):**
@@ -144,11 +131,11 @@ Video akışındaki titremeyi önlemek için özel bir algoritma çalışır:
 
 ### 🚀 Performans Özeti
 
-| Modül      | Teknoloji         | Görevi              | Hız            |
-|:-----------|:------------------|:--------------------|:---------------|
-| **Tespit** | YOLOv8 Large      | Yüzü bulma          | ~30-50ms (GPU) |
-| **Vektör** | FaceNet           | Yüzü sayıya çevirme | ~100-200ms     |
-| **Karar**  | MLP / XGBoost     | Kimliği bulma       | **< 1ms**      |
-| **Takip**  | Euclidean Tracker | Yüzü izleme         | **< 1ms**      |
+| Modül      | Teknoloji          | Görevi              | Hız            |
+|:-----------|:-------------------|:--------------------|:---------------|
+| **Tespit** | YOLOv8 Large       | Yüzü bulma          | ~30-50ms (GPU) |
+| **Vektör** | FaceNet            | Yüzü sayıya çevirme | ~100-200ms     |
+| **Karar**  | MLP Neural Network | Kimliği bulma       | **< 1ms**      |
+| **Takip**  | Euclidean Tracker  | Yüzü izleme         | **< 1ms**      |
 
 Bu mimari, sistemin binlerce kişiyi tanısa bile gerçek zamanlı (Real-Time) çalışabilmesini sağlar.

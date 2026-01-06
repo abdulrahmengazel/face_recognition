@@ -15,7 +15,7 @@ An end-to-end, high-performance face recognition system designed for modern scho
 *Tkinter-based Desktop GUI** for administrative tasks with a **FastAPI REST backend** for mobile and web integration.
 
 Built with scalability in mind, the system uses **PostgreSQL** with the **pgvector** extension for ultra-fast similarity
-searches, and advanced **Machine Learning Classifiers (MLP & XGBoost)** for state-of-the-art recognition accuracy.
+searches, and advanced **Machine Learning Classifiers (MLP Neural Network)** for state-of-the-art recognition accuracy.
 
 ---
 
@@ -25,7 +25,7 @@ searches, and advanced **Machine Learning Classifiers (MLP & XGBoost)** for stat
 - **🧠 Advanced AI Models:**
     - **Detection:** Support for HOG, CNN, and YOLOv8.
     - **Recognition:** dlib and FaceNet embeddings.
-    - **Classification:** **MLP (Neural Network)** and **XGBoost** for high-accuracy identification.
+    - **Classification:** **MLP (Multi-Layer Perceptron)** for high-accuracy identification.
 - **⚡ High Performance:**
     - Database-driven storage using `pgvector`.
     - Real-time **Face Tracking & Stabilization** in video streams.
@@ -46,7 +46,6 @@ searches, and advanced **Machine Learning Classifiers (MLP & XGBoost)** for stat
     - `face_recognition` (dlib)
     - `deepface` (FaceNet)
     - `scikit-learn` (MLP Classifier)
-    - `xgboost` (Gradient Boosting)
     - `tensorflow` & `torch`
 - **Database:** PostgreSQL + `pgvector`
 - **Infrastructure:** CUDA/cuDNN support for GPU acceleration
@@ -67,7 +66,6 @@ searches, and advanced **Machine Learning Classifiers (MLP & XGBoost)** for stat
 ### 📥 Setup & Installation
 
 #### 1. Clone the Repository
-
 ```powershell
 git clone <repository-url>
 cd PythonProject
@@ -84,14 +82,12 @@ pip install -r requirements.txt
 ```
 
 #### 3. Database Configuration
-
 1. Ensure PostgreSQL is running.
 2. Create a database (default name: `postgres`).
 3. Enable `pgvector`: `CREATE EXTENSION IF NOT EXISTS vector;`
 4. Update connection details in `config/settings.py` (see [Environment Variables](#-environment-variables-config)).
 
 #### 4. Prepare Training Data
-
 Organize your images in `data/TrainingImages/` with one folder per person:
 ```text
 data/TrainingImages/
@@ -112,13 +108,12 @@ data/TrainingImages/
 python main.py
 ```
 
-*Use the GUI to configure models, run batch training, switch classifiers (MLP/XGBoost), and test recognition.*
+*Use the GUI to configure models, run batch training, retrain classifier, and test recognition.*
 
 #### API Server
 ```powershell
 python api.py
 ```
-
 *The API will be available at `http://localhost:8000`. Access Swagger docs at `/docs`.*
 
 ---
@@ -143,8 +138,7 @@ Configuration is primarily managed in `config/settings.py`. Key parameters inclu
     - `FACE_DETECTION_MODEL`: "yolo", "hog", or "cnn".
     - `YOLO_WEIGHTS`: Path to the selected YOLO model.
 - **Classifier:**
-    - `type`: "mlp" or "xgboost".
-    - `hidden_layers`, `max_iter`, `n_estimators`, etc.
+    - `hidden_layers`, `max_iter`, `solver`, etc.
 - **Thresholds:** `RECOGNITION_THRESHOLD` (default: 0.4).
 - **UI Colors:** Customizable theme in `UI_COLORS`.
 
@@ -153,16 +147,13 @@ Configuration is primarily managed in `config/settings.py`. Key parameters inclu
 ### 🧪 Tests & Benchmarking
 
 To run the model evaluation script:
-
 ```powershell
 python benchmarks/evaluate_models.py
 ```
-
 This script will:
-
 1. Load images from `data/TrainingImages/`.
 2. Generate embeddings using the configured models.
-3. Train the selected Classifier (MLP/XGBoost).
+3. Train the MLP Classifier.
 4. Output accuracy metrics and a Confusion Matrix.
 
 ---

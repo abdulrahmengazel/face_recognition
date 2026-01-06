@@ -26,6 +26,9 @@ FACE_DETECTION_MODEL = "yolo"
 # --- Recognition Threshold ---
 RECOGNITION_THRESHOLD = 0.4
 
+# --- Classifier Usage ---
+USE_CLASSIFIER = True  # Toggle to use MLP Classifier or DB Search
+
 # --- YOLO Specific Config ---
 # Use absolute path to avoid any ambiguity
 YOLO_DIR = os.path.join(PROJECT_ROOT, "assets", "yolo")
@@ -69,19 +72,12 @@ TRAINING_CONFIG = {
         "cnn_upsample": 0  # Reset to 0 (Safe)
     },
     "classifier": {
-        "type": "mlp",  # Options: "mlp", "xgboost"
-        # MLP Settings
         "hidden_layers": (1024, 512, 256),
         "max_iter": 1000,
         "solver": "adam",
         "learning_rate_init": 0.001,
         "alpha": 0.0001,
-        "n_iter_no_change": 20,
-        # XGBoost Settings
-        "n_estimators": 100,
-        "max_depth": 6,
-        "learning_rate": 0.01,
-        "subsample": 0.8
+        "n_iter_no_change": 20
     }
 }
 
