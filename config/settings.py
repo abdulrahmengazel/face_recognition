@@ -72,7 +72,6 @@ TRAINING_CONFIG = {
         "cnn_upsample": 0  # Reset to 0 (Safe)
     },
     "classifier": {
-        "hidden_layers": (1024, 512, 256),
         "max_iter": 1000,
         "solver": "adam",
         "learning_rate_init": 0.001,

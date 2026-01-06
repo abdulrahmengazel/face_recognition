@@ -37,7 +37,8 @@ def load_classifier():
 
 def predict_person(encoding):
     """Predicts the person using the loaded classifier or falls back to DB."""
-    if classifier_model and label_encoder and scaler:
+    # Check if classifier is enabled in settings AND loaded
+    if settings.USE_CLASSIFIER and classifier_model and label_encoder and scaler:
         try:
             # Ensure encoding is a numpy array
             if isinstance(encoding, list):
@@ -137,10 +138,12 @@ def select_and_recognize_image():
 
                     # Logic: If using classifier, score is (1-prob). If DB, score is distance.
                     # Both cases: Lower is better/more confident match.
-                    threshold = 0.5 if classifier_model else settings.RECOGNITION_THRESHOLD
+                    threshold = 0.5 if (
+                                settings.USE_CLASSIFIER and classifier_model) else settings.RECOGNITION_THRESHOLD
 
                     if db_name and score < threshold:
-                        conf_display = f"{(1 - score) * 100:.1f}%" if classifier_model else f"{score:.2f}"
+                        conf_display = f"{(1 - score) * 100:.1f}%" if (
+                                    settings.USE_CLASSIFIER and classifier_model) else f"{score:.2f}"
                         name = f"{db_name.upper()} ({conf_display})"
                         color = (0, 255, 0)
 
@@ -173,7 +176,8 @@ def run_image_app(parent_root):
     ctk.CTkLabel(window, text="Resim Analizi", font=ctk.CTkFont(size=16, weight="bold"),
                  text_color=settings.UI_COLORS["text"]).grid(row=0, column=0, pady=(20, 10))
 
-    model_text = f"{settings.ENCODING_MODEL.upper()} + Classifier" if classifier_model else f"{settings.ENCODING_MODEL.upper()} (DB Search)"
+    model_text = f"{settings.ENCODING_MODEL.upper()} + Classifier" if (
+                settings.USE_CLASSIFIER and classifier_model) else f"{settings.ENCODING_MODEL.upper()} (DB Search)"
     ctk.CTkLabel(window, text=model_text, font=ctk.CTkFont(size=12), text_color=settings.UI_COLORS["hover"]).grid(row=1,
                                                                                                                   column=0,
                                                                                                                   pady=(

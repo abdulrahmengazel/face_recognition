@@ -41,7 +41,8 @@ def load_classifier():
 
 def predict_person(encoding, cursor):
     """Predicts the person using the loaded classifier or falls back to DB."""
-    if classifier_model and label_encoder and scaler:
+    # Check if classifier is enabled in settings AND loaded
+    if settings.USE_CLASSIFIER and classifier_model and label_encoder and scaler:
         try:
             # Ensure encoding is a numpy array
             if isinstance(encoding, list):
@@ -190,7 +191,8 @@ class FaceTracker:
             # If current is "Ahmed" but history is empty, show "Ahmed"
 
             # Format score for display
-            conf_display = f"{(1 - score) * 100:.0f}%" if classifier_model else f"{score:.2f}"
+            conf_display = f"{(1 - score) * 100:.0f}%" if (
+                        settings.USE_CLASSIFIER and classifier_model) else f"{score:.2f}"
             display_text = f"{final_name} ({conf_display})" if final_name != "BILINMIYOR" else "BILINMIYOR"
             color = (0, 255, 0) if final_name != "BILINMIYOR" else (0, 0, 255)
 
@@ -259,7 +261,8 @@ class FaceProcessingThread:
                             if encoding is not None:
                                 db_name, db_score = predict_person(encoding, cursor)
                                 # Use 0.5 as default threshold for classifier if not overridden
-                                threshold = 0.5 if classifier_model else settings.RECOGNITION_THRESHOLD
+                                threshold = 0.5 if (
+                                            settings.USE_CLASSIFIER and classifier_model) else settings.RECOGNITION_THRESHOLD
 
                                 if db_name and db_score < threshold:
                                     name = db_name.upper()
@@ -344,7 +347,8 @@ def run_video_app(parent_root):
     ctk.CTkLabel(window, text="Canlı Kamera Tanıma", font=ctk.CTkFont(size=16, weight="bold"),
                  text_color=settings.UI_COLORS["text"]).grid(row=0, column=0, pady=(20, 10))
 
-    model_text = f"{settings.ENCODING_MODEL.upper()} + Classifier" if classifier_model else f"{settings.ENCODING_MODEL.upper()} (DB Search)"
+    model_text = f"{settings.ENCODING_MODEL.upper()} + Classifier" if (
+                settings.USE_CLASSIFIER and classifier_model) else f"{settings.ENCODING_MODEL.upper()} (DB Search)"
     ctk.CTkLabel(window, text=model_text, font=ctk.CTkFont(size=12), text_color=settings.UI_COLORS["hover"]).grid(row=1,
                                                                                                                   column=0,
                                                                                                                   pady=(

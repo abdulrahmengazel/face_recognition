@@ -102,16 +102,15 @@ class MainApp(ctk.CTk):
                                           text_color=settings.UI_COLORS["text"],
                                           dropdown_fg_color=settings.UI_COLORS["frame"], command=self.update_settings)
 
-        # Classifier Type (NEW)
-        ctk.CTkLabel(card, text="Classifier Type:", font=self.text_font, text_color=settings.UI_COLORS["text"]).grid(
-            row=4, column=0, padx=20, pady=10, sticky="w")
-        self.classifier_type_var = ctk.StringVar(value=settings.TRAINING_CONFIG["classifier"].get("type", "mlp"))
-        clf_combo = ctk.CTkComboBox(card, variable=self.classifier_type_var, values=["mlp", "xgboost"],
-                                    fg_color=settings.UI_COLORS["bg"], button_color=settings.UI_COLORS["button"],
-                                    button_hover_color=settings.UI_COLORS["hover"],
-                                    text_color=settings.UI_COLORS["text"],
-                                    dropdown_fg_color=settings.UI_COLORS["frame"], command=self.update_settings)
-        clf_combo.grid(row=4, column=1, padx=20, pady=10, sticky="ew")
+        # Use Classifier Checkbox (NEW)
+        self.use_classifier_var = ctk.BooleanVar(value=settings.USE_CLASSIFIER)
+        self.use_classifier_chk = ctk.CTkCheckBox(card, text="Use Classifier (MLP)", variable=self.use_classifier_var,
+                                                  onvalue=True, offvalue=False,
+                                                  fg_color=settings.UI_COLORS["button"],
+                                                  hover_color=settings.UI_COLORS["hover"],
+                                                  text_color=settings.UI_COLORS["text"],
+                                                  command=self.update_settings)
+        self.use_classifier_chk.grid(row=4, column=0, columnspan=2, padx=20, pady=10, sticky="w")
 
         # Threshold
         ctk.CTkLabel(card, text="Sensitivity:", font=self.text_font, text_color=settings.UI_COLORS["text"]).grid(row=5,
@@ -230,13 +229,11 @@ class MainApp(ctk.CTk):
         settings.YOLO_WEIGHTS = settings.YOLO_MODELS.get(selected_yolo_name, "assets/yolo/yolov8m-face.pt")
         settings.RECOGNITION_THRESHOLD = round(self.threshold_slider.get(), 2)
         settings.PROCESSING_SCALE = round(self.scale_slider.get(), 2)
-
-        # Update Classifier Type
-        settings.TRAINING_CONFIG["classifier"]["type"] = self.classifier_type_var.get()
+        settings.USE_CLASSIFIER = self.use_classifier_var.get()
         
         self.toggle_yolo_widget()
         print(
-            f"Settings Updated: {settings.ENCODING_MODEL} | {settings.FACE_DETECTION_MODEL} | {settings.TRAINING_CONFIG['classifier']['type']}")
+            f"Settings Updated: {settings.ENCODING_MODEL} | {settings.FACE_DETECTION_MODEL} | Classifier: {settings.USE_CLASSIFIER}")
 
     def add_new_person(self):
         # Ask for name
