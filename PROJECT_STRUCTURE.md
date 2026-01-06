@@ -1,66 +1,154 @@
-# 📂 Project Structure Documentation
+# 🧠 Detaylı Sistem Çalışma Mimarisi (Detailed System Architecture)
 
-This document explains the structure of the Face Recognition System project, detailing the purpose of each folder and key file.
-
----
-
-### 🌳 Root Directory
-
-- **`main.py`**: The main entry point of the application. It launches the main GUI window and handles user interactions.
-- **`requirements.txt`**: Lists all the Python libraries required to run the project.
-- **`PROJECT_STRUCTURE.md`**: This file.
+Bu belge, Yüz Tanıma Sistemi'nin (Smart School Face Recognition) arka planında çalışan algoritmaları, veri akışlarını ve
+karar mekanizmalarını **derinlemesine** teknik detaylarla açıklar.
 
 ---
 
-### ⚙️ `config/`
+## 1. 📂 Eğitim Aşaması (Training Phase) - "Veri Toplama ve İşleme"
 
-This package contains all global settings and configurations.
+Bu aşama, ham piksellerden oluşan görüntülerin, yapay zekanın anlayabileceği matematiksel vektörlere dönüştürülüp *
+*PostgreSQL** veritabanında yapılandırılmış bir şekilde saklanması sürecidir.
 
-- **`settings.py`**: A central file for all adjustable parameters, such as model paths, recognition thresholds, database credentials, and performance tuning options.
+### 🛠️ Teknik Süreç Detayları:
 
----
+#### A. Görüntü Okuma ve Ön İşleme (Preprocessing)
 
-### 🧠 `core/`
+1. **Dosya Okuma:** `cv2.imdecode` kullanılarak dosya sisteminden resimler okunur (Türkçe karakterli dosya yollarını
+   desteklemek için).
+2. **Renk Dönüşümü:** OpenCV resimleri varsayılan olarak **BGR** (Blue-Green-Red) formatında okur. Modellerin doğru
+   çalışması için bu, **RGB** formatına dönüştürülür.
+3. **Yeniden Boyutlandırma (Resizing):** İşlem yükünü optimize etmek için resimler, en-boy oranı korunarak `800x800`
+   piksel sınırlarına ölçeklenir.
 
-This package contains the fundamental logic (the "brain") of the system.
+#### B. Yüz Tespiti (Face Detection - YOLOv8)
 
-- **`database.py`**: Manages all interactions with the PostgreSQL database, including connection pooling, table creation, and `pgvector` index setup.
-- **`detector.py`**: A unified layer for face detection. It contains the logic to load and run different detection models like HOG, CNN, and YOLO.
+* **Model:** `yolov8l-face.pt` (Large model) kullanılır.
+* **Algoritma:** YOLO (You Only Look Once), resmi tek seferde tarar ve yüzlerin bulunduğu koordinatları (
+  `Bounding Box: [x1, y1, x2, y2]`) ve bir **Güven Skoru (Confidence Score)** döndürür.
+* **Filtreleme:** Sadece güven skoru `%50` (0.5) üzerinde olan yüzler işleme alınır.
 
----
+#### C. Özellik Çıkarımı (Feature Extraction / Embedding)
 
-### 🖥️ `apps/`
+Tespit edilen yüz bölgesi kesilir ve seçilen modele gönderilir:
 
-This package contains the user-facing applications and GUI components.
+* **FaceNet (Google):** Yüzü 128 boyutlu bir hiper-küre (hypersphere) üzerinde bir noktaya eşler.
+* **Dlib (ResNet):** Yüzü 128 boyutlu bir vektöre dönüştürür.
+* **Jittering (Sadece Dlib):** Resim rastgele bozulmalara (döndürme, kaydırma) uğratılarak 10 kez işlenir ve ortalaması
+  alınır. Bu, gürültüye karşı dayanıklılığı artırır.
+* **Sonuç:** Her yüz için `[0.123, -0.45, 0.88, ...]` şeklinde 128 adet ondalıklı sayıdan oluşan bir liste elde edilir.
 
-- **`training_app.py`**: Handles the logic for "training" (enrolling faces). It reads images, extracts embeddings for both dlib and FaceNet, and saves them to the database. Includes a progress bar GUI.
-- **`image_app.py`**: The application for recognizing faces in a static image file.
-- **`video_app.py`**: The application for real-time face recognition using a live camera feed.
+#### D. Veritabanı Yönetimi (PostgreSQL + pgvector)
 
----
-
-### 📊 `benchmarks/`
-
-This package contains all scripts related to testing, evaluation, and performance analysis.
-
-- **`suite.py`**: A comprehensive benchmark suite that runs static tests (comparing detection and recognition models) and live tests (real-time camera analysis). It generates reports and plots.
-- **`detection_only.py`**: A focused script to test and report the performance (speed, success rate) of a single, user-selected detection model.
-- **`live_test.py`**: A simple GUI application to visually test and compare detection models in real-time, showing bounding boxes, confidence scores, and FPS.
-- **`check_gpu.py`**: A diagnostic tool to check if the deep learning libraries (PyTorch, TensorFlow) are utilizing the GPU.
-
----
-
-### 🖼️ `assets/`
-
-This folder stores static asset files required by the project.
-
-- **`yolo/`**: Contains the pre-trained `.pt` model files for the YOLO face detector.
+1. **Kişi Kaydı:** Kişi ismi `people` tablosuna eklenir ve benzersiz bir `person_id` (Primary Key) üretilir.
+2. **Temizlik:** Kişinin seçilen model (örn: FaceNet) için daha önce kaydedilmiş eski vektörleri silinir (Duplicate
+   önleme).
+3. **Vektör Kaydı:** Her bir resimden çıkarılan vektör, `face_encodings` tablosuna **ayrı bir satır** olarak eklenir.
+    * *Neden?* Ortalama (Mean) almak yerine tüm varyasyonları saklamak, sınıflandırıcının kişinin farklı hallerini (
+      gözlüklü, sakallı, yandan) öğrenmesini sağlar.
 
 ---
 
-### 🗃️ `data/`
+## 2. 🧠 Sınıflandırıcı Aşaması (Classifier Phase) - "Model Eğitimi"
 
-This folder is used for all user-provided data.
+Bu aşama, veritabanındaki binlerce vektörü analiz ederek, hangi vektörün kime ait olduğunu öğrenen bir "Yapay Beyin"
+oluşturma sürecidir.
 
-- **`TrainingImages/`**: Contains subfolders for each person, with images used to train the system.
-- **`TestImages/`--**: Contains subfolders for each person, with new images used for evaluating the system's accuracy.
+### 🛠️ Teknik Süreç Detayları:
+
+#### A. Veri Hazırlığı (Data Preparation)
+
+1. **Fetch:** Veritabanından `(İsim, Vektör)` çiftleri çekilir.
+2. **Label Encoding:** İsimler (String), makine öğrenmesi için tamsayılara (Integer) çevrilir.
+    * `Ahmet` -> `0`, `Mehmet` -> `1`, `Zeynep` -> `2`.
+3. **Scaling (Kritik Adım):** `StandardScaler` kullanılır.
+    * Her özellik (feature) için: `z = (x - u) / s` formülü uygulanır.
+    * Bu işlem, verilerin ortalamasını 0, varyansını 1 yapar. Sinir ağlarının (Neural Networks) yakınsaması (
+      convergence) için zorunludur.
+
+#### B. Model Seçimi ve Eğitimi
+
+Kullanıcı tercihine göre iki modelden biri eğitilir:
+
+**Seçenek 1: MLP Classifier (Multi-Layer Perceptron)**
+
+* **Mimari:** Derin Yapay Sinir Ağı.
+    * **Girdi Katmanı:** 128 Nöron (Yüz vektörü).
+    * **Gizli Katmanlar:** 1024 -> 512 -> 256 Nöron (ReLU aktivasyon fonksiyonu ile).
+    * **Çıktı Katmanı:** Sınıf sayısı kadar nöron (Softmax aktivasyonu ile olasılık dağılımı).
+* **Optimizasyon:** `Adam` algoritması, ağırlıkları güncelleyerek hatayı (Log-Loss) minimize eder.
+* **Avantajı:** Karmaşık, doğrusal olmayan ilişkileri çok iyi öğrenir.
+
+**Seçenek 2: XGBoost (eXtreme Gradient Boosting)**
+
+* **Mimari:** Karar Ağaçları (Decision Trees) topluluğu.
+* **Yöntem:** Hataları ardışık olarak düzelten yüzlerce ağaç oluşturur.
+* **Avantajı:** Tablo yapısındaki verilerde (vektörler gibi) çok hızlıdır ve aşırı öğrenmeye (overfitting) karşı
+  dirençlidir.
+
+#### C. Doğrulama (Validation)
+
+* Veri seti `%90 Eğitim`, `%10 Doğrulama` olarak ayrılır.
+* Eğitim sırasında modelin performansı (Loss değeri) canlı olarak izlenir.
+
+#### D. Serileştirme (Serialization)
+
+* Eğitilen Model + Label Encoder + Scaler, `pickle` kütüphanesi ile tek bir `.pkl` dosyasına paketlenir. Bu dosya,
+  uygulamanın "beyni"dir.
+
+---
+
+## 3. 👁️ Tanıma ve İşleme Aşaması (Inference Phase) - "Canlı Analiz"
+
+Bu aşama, sistemin gerçek dünyada çalıştığı, kameradan gelen görüntüyü saniyeler içinde analiz edip kimlik tespiti
+yaptığı andır.
+
+### 🛠️ Teknik Süreç Detayları:
+
+#### A. Pipeline (İşlem Hattı)
+
+1. **Frame Capture:** Kameradan görüntü alınır.
+2. **Detection:** YOLOv8 ile yüzler bulunur.
+3. **Encoding:** Yüzlerden 128d vektör çıkarılır.
+4. **Preprocessing:** Vektör, eğitimde kaydedilen `Scaler` ile normalize edilir.
+
+#### B. Tahmin (Prediction)
+
+Model (MLP veya XGBoost), normalize edilmiş vektörü alır ve bir olasılık dizisi döndürür:
+
+* `[0.01, 0.98, 0.01]` -> Bu, %98 ihtimalle 1. indeksteki kişi demektir.
+* **Güven Eşiği (Threshold):** Eğer en yüksek olasılık `%30` (0.3) altındaysa, sonuç reddedilir ve "BİLİNMİYOR" yazılır.
+
+#### C. Yüz Takibi ve Stabilizasyon (Face Tracking & Smoothing)
+
+Video akışındaki titremeyi önlemek için özel bir algoritma çalışır:
+
+1. **Eşleştirme (Matching):**
+    * Şu anki karedeki yüzün merkezi ile bir önceki karedeki yüzlerin merkezleri arasındaki **Öklid Mesafesi**
+      hesaplanır.
+    * Mesafe kısaysa (örn: < 100 piksel), bu yüzlerin aynı kişiye ait olduğu varsayılır ve aynı `Face ID` atanır.
+
+2. **Oylama (Voting):**
+    * Her `Face ID` için son 8 karenin tahmin sonuçları bir hafızada (Deque) tutulur.
+    * Örn: `['Ali', 'Ali', 'Bilinmiyor', 'Ali', 'Mehmet', 'Ali', 'Ali', 'Ali']`
+    * **Mod (Mode) Hesabı:** En çok tekrar eden isim ('Ali') ekrana yazdırılır.
+    * Bu sayede anlık hatalı tahminler (glitch) filtrelenir ve ekrandaki isim sabit kalır.
+
+#### D. Fallback (Yedek Plan)
+
+* Eğer `classifier.pkl` dosyası bulunamazsa veya bozuksa, sistem otomatik olarak **Veritabanı Arama Moduna** (Legacy
+  Mode) geçer.
+* Bu modda, vektör ile veritabanındaki tüm kayıtlar arasındaki mesafe tek tek hesaplanır (Daha yavaş ama güvenilir).
+
+---
+
+### 🚀 Performans Özeti
+
+| Modül      | Teknoloji         | Görevi              | Hız            |
+|:-----------|:------------------|:--------------------|:---------------|
+| **Tespit** | YOLOv8 Large      | Yüzü bulma          | ~30-50ms (GPU) |
+| **Vektör** | FaceNet           | Yüzü sayıya çevirme | ~100-200ms     |
+| **Karar**  | MLP / XGBoost     | Kimliği bulma       | **< 1ms**      |
+| **Takip**  | Euclidean Tracker | Yüzü izleme         | **< 1ms**      |
+
+Bu mimari, sistemin binlerce kişiyi tanısa bile gerçek zamanlı (Real-Time) çalışabilmesini sağlar.
