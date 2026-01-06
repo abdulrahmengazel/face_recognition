@@ -65,13 +65,14 @@ TRAINING_CONFIG = {
     },
     "dlib": {
         "epochs": 100,
-        "jitter": 1  # Reset to 1 for speed (since we store all encodings)
+        "jitter": 5  # Reset to 1 for speed (since we store all encodings)
     },
     "detection": {
         "hog_upsample": 1,  # Reset to 1 (Safe)
         "cnn_upsample": 0  # Reset to 0 (Safe)
     },
     "classifier": {
+        "hidden_layer_sizes": (512, 1024, 256),
         "max_iter": 1000,
         "solver": "adam",
         "learning_rate_init": 0.001,

@@ -34,7 +34,7 @@ def get_encodings_for_image(image_rgb):
 
     # --- DLIB ENCODING ---
     if settings.ENCODING_MODEL == "dlib":
-        jitter = settings.TRAINING_CONFIG.get("dlib", {}).get("jitter", 1)
+        jitter = settings.TRAINING_CONFIG.get("dlib", {}).get("jitter", 5)
         dlib_encs = face_recognition.face_encodings(image_rgb, [locs[0]], num_jitters=jitter)
         if dlib_encs:
             dlib_enc = dlib_encs[0]
@@ -106,12 +106,12 @@ def train_classifier(progress_callback=None):
     clf_config = settings.TRAINING_CONFIG.get("classifier", {})
     print("Using MLP Classifier...")
     clf = MLPClassifier(
-        hidden_layer_sizes=clf_config.get((512, 1024, 256)),
-        max_iter=clf_config.get("max_iter"),
+        hidden_layer_sizes=clf_config.get("hidden_layer_sizes", (512, 1024, 256)),
+        max_iter=clf_config.get("max_iter", 1000),
         solver=clf_config.get("solver", "adam"),
-        learning_rate_init=clf_config.get("learning_rate_init"),
-        alpha=clf_config.get("alpha"),
-        n_iter_no_change=clf_config.get("n_iter_no_change"),
+        learning_rate_init=clf_config.get("learning_rate_init", 0.001),
+        alpha=clf_config.get("alpha", 0.0001),
+        n_iter_no_change=clf_config.get("n_iter_no_change", 20),
         random_state=42,
         verbose=True
     )
