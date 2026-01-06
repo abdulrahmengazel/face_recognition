@@ -1,0 +1,85 @@
+Model: DLIB
+[Dlib] Jitter (Tekrar Örnekleme): 5
+----------------------------------
+Database Tables & Indexes Optimized (Multi-Model Support).
+YOLO model 'C:\Users\abdul\ymg3\PythonProject\assets\yolo\yolov8l-face.pt' loaded successfully on device: CUDA.
+Training Classifier...
+Using MLP Classifier...
+Iteration 1, loss = 7.50142589
+Iteration 2, loss = 5.33258105
+Iteration 3, loss = 2.66934510
+Iteration 4, loss = 0.53403320
+Iteration 5, loss = 0.17375374
+Iteration 6, loss = 0.08241966
+Iteration 7, loss = 0.04380884
+Iteration 8, loss = 0.02710091
+Iteration 9, loss = 0.02345073
+Iteration 10, loss = 0.02360136
+Iteration 11, loss = 0.02115775
+Iteration 12, loss = 0.01727748
+Iteration 13, loss = 0.01627734
+Iteration 14, loss = 0.01360280
+Iteration 15, loss = 0.01448200
+Iteration 16, loss = 0.01721090
+Iteration 17, loss = 0.01552015
+Iteration 18, loss = 0.02687838
+Iteration 19, loss = 0.04617390
+Iteration 20, loss = 0.08612827
+Iteration 21, loss = 0.12034920
+Iteration 22, loss = 0.10369636
+Iteration 23, loss = 0.07420026
+Iteration 24, loss = 0.04783597
+Iteration 25, loss = 0.03007143
+Iteration 26, loss = 0.02412265
+Iteration 27, loss = 0.02218627
+Iteration 28, loss = 0.01570895
+Iteration 29, loss = 0.00997856
+Iteration 30, loss = 0.01017555
+Iteration 31, loss = 0.00848268
+Iteration 32, loss = 0.01089462
+Iteration 33, loss = 0.00747466
+Iteration 34, loss = 0.00634101
+Iteration 35, loss = 0.00863021
+Iteration 36, loss = 0.00799952
+Iteration 37, loss = 0.01900842
+Iteration 38, loss = 0.03366948
+Iteration 39, loss = 0.05496731
+Iteration 40, loss = 0.09471265
+Iteration 41, loss = 0.10206995
+Iteration 42, loss = 0.09208716
+Iteration 43, loss = 0.05437971
+Iteration 44, loss = 0.04188931
+Iteration 45, loss = 0.02396005
+Iteration 46, loss = 0.02209671
+Iteration 47, loss = 0.01634637
+Iteration 48, loss = 0.01194690
+Iteration 49, loss = 0.01317040
+Iteration 50, loss = 0.00859058
+Iteration 51, loss = 0.00590780
+Iteration 52, loss = 0.00754971
+Iteration 53, loss = 0.00695302
+Iteration 54, loss = 0.00528256
+Iteration 55, loss = 0.00605811
+Iteration 56, loss = 0.00671638
+Iteration 57, loss = 0.01271023
+Iteration 58, loss = 0.01513987
+Iteration 59, loss = 0.01927640
+Iteration 60, loss = 0.02391535
+Iteration 61, loss = 0.03710172
+Iteration 62, loss = 0.04851786
+Iteration 63, loss = 0.04891860
+Iteration 64, loss = 0.06550908
+Iteration 65, loss = 0.04371288
+Iteration 66, loss = 0.03826903
+Iteration 67, loss = 0.02415866
+Iteration 68, loss = 0.01796665
+Iteration 69, loss = 0.01360123
+Iteration 70, loss = 0.00862837
+Iteration 71, loss = 0.00975522
+Iteration 72, loss = 0.00882304
+Iteration 73, loss = 0.00710623
+Iteration 74, loss = 0.00926111
+Iteration 75, loss = 0.00792519
+Training loss did not improve more than tol=0.000100 for 20 consecutive epochs. Stopping.
+Classifier saved to C:\Users\abdul\ymg3\PythonProject\assets\classifier.pkl
+Eğitim Bitti.
