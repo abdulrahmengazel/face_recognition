@@ -39,7 +39,7 @@ YOLO_MODELS = {
 
 # The currently selected YOLO model file (Default)
 YOLO_WEIGHTS = YOLO_MODELS["YOLOv8 Large"]
-YOLO_CONFIDENCE = 0.6
+YOLO_CONFIDENCE = 0.5
 
 # --- Performance Tuning ---
 PROCESSING_SCALE = 1.0
@@ -69,9 +69,19 @@ TRAINING_CONFIG = {
         "cnn_upsample": 0  # Reset to 0 (Safe)
     },
     "classifier": {
-        "hidden_layers": (128, 64),
-        "max_iter": 500,
-        "solver": "adam"
+        "type": "mlp",  # Options: "mlp", "xgboost"
+        # MLP Settings
+        "hidden_layers": (1024, 512, 256),
+        "max_iter": 1000,
+        "solver": "adam",
+        "learning_rate_init": 0.001,
+        "alpha": 0.0001,
+        "n_iter_no_change": 20,
+        # XGBoost Settings
+        "n_estimators": 100,
+        "max_depth": 6,
+        "learning_rate": 0.01,
+        "subsample": 0.8
     }
 }
 

@@ -102,8 +102,19 @@ class MainApp(ctk.CTk):
                                           text_color=settings.UI_COLORS["text"],
                                           dropdown_fg_color=settings.UI_COLORS["frame"], command=self.update_settings)
 
+        # Classifier Type (NEW)
+        ctk.CTkLabel(card, text="Classifier Type:", font=self.text_font, text_color=settings.UI_COLORS["text"]).grid(
+            row=4, column=0, padx=20, pady=10, sticky="w")
+        self.classifier_type_var = ctk.StringVar(value=settings.TRAINING_CONFIG["classifier"].get("type", "mlp"))
+        clf_combo = ctk.CTkComboBox(card, variable=self.classifier_type_var, values=["mlp", "xgboost"],
+                                    fg_color=settings.UI_COLORS["bg"], button_color=settings.UI_COLORS["button"],
+                                    button_hover_color=settings.UI_COLORS["hover"],
+                                    text_color=settings.UI_COLORS["text"],
+                                    dropdown_fg_color=settings.UI_COLORS["frame"], command=self.update_settings)
+        clf_combo.grid(row=4, column=1, padx=20, pady=10, sticky="ew")
+
         # Threshold
-        ctk.CTkLabel(card, text="Sensitivity:", font=self.text_font, text_color=settings.UI_COLORS["text"]).grid(row=4,
+        ctk.CTkLabel(card, text="Sensitivity:", font=self.text_font, text_color=settings.UI_COLORS["text"]).grid(row=5,
                                                                                                                  column=0,
                                                                                                                  padx=20,
                                                                                                                  pady=10,
@@ -114,13 +125,13 @@ class MainApp(ctk.CTk):
                                               button_hover_color=settings.UI_COLORS["hover"],
                                               progress_color=settings.UI_COLORS["button"])
         self.threshold_slider.set(settings.RECOGNITION_THRESHOLD)
-        self.threshold_slider.grid(row=4, column=1, padx=(20, 5), pady=10, sticky="ew")
+        self.threshold_slider.grid(row=5, column=1, padx=(20, 5), pady=10, sticky="ew")
         self.threshold_label = ctk.CTkLabel(card, text=f"{settings.RECOGNITION_THRESHOLD:.2f}",
                                             text_color=settings.UI_COLORS["text"], width=30)
-        self.threshold_label.grid(row=4, column=2, padx=(0, 20), pady=10)
+        self.threshold_label.grid(row=5, column=2, padx=(0, 20), pady=10)
 
         # Video Scale
-        ctk.CTkLabel(card, text="Performance:", font=self.text_font, text_color=settings.UI_COLORS["text"]).grid(row=5,
+        ctk.CTkLabel(card, text="Performance:", font=self.text_font, text_color=settings.UI_COLORS["text"]).grid(row=6,
                                                                                                                  column=0,
                                                                                                                  padx=20,
                                                                                                                  pady=10,
@@ -130,16 +141,16 @@ class MainApp(ctk.CTk):
                                           button_hover_color=settings.UI_COLORS["hover"],
                                           progress_color=settings.UI_COLORS["button"])
         self.scale_slider.set(settings.PROCESSING_SCALE)
-        self.scale_slider.grid(row=5, column=1, padx=(20, 5), pady=10, sticky="ew")
+        self.scale_slider.grid(row=6, column=1, padx=(20, 5), pady=10, sticky="ew")
         self.scale_label = ctk.CTkLabel(card, text=f"{settings.PROCESSING_SCALE:.2f}",
                                         text_color=settings.UI_COLORS["text"], width=30)
-        self.scale_label.grid(row=5, column=2, padx=(0, 20), pady=10)
+        self.scale_label.grid(row=6, column=2, padx=(0, 20), pady=10)
 
         apply_btn = ctk.CTkButton(card, text="Apply Changes", command=self.update_settings,
                                   fg_color=settings.UI_COLORS["bg"], hover_color=settings.UI_COLORS["hover"],
                                   text_color=settings.UI_COLORS["text"], border_width=1,
                                   border_color=settings.UI_COLORS["text"])
-        apply_btn.grid(row=6, column=0, columnspan=3, padx=20, pady=20, sticky="ew")
+        apply_btn.grid(row=7, column=0, columnspan=3, padx=20, pady=20, sticky="ew")
 
     def create_actions_card(self):
         card = ctk.CTkFrame(self.main_scroll, fg_color=settings.UI_COLORS["frame"], corner_radius=15)
@@ -168,17 +179,25 @@ class MainApp(ctk.CTk):
                                   border_color=settings.UI_COLORS["button"])
         train_btn.grid(row=2, column=0, columnspan=2, padx=20, pady=10, sticky="ew")
 
+        # Retrain Classifier Only Button (NEW)
+        retrain_btn = ctk.CTkButton(card, text="⚡ Retrain Classifier Only", command=self.run_classifier_training,
+                                    height=40,
+                                    fg_color=settings.UI_COLORS["bg"], hover_color=settings.UI_COLORS["hover"],
+                                    text_color=settings.UI_COLORS["text"], font=self.sub_font, border_width=1,
+                                    border_color=settings.UI_COLORS["button"])
+        retrain_btn.grid(row=3, column=0, columnspan=2, padx=20, pady=10, sticky="ew")
+
         # Image App Button
         img_btn = ctk.CTkButton(card, text="Analyze Image", command=self.run_image_mode, height=50,
                                 fg_color=settings.UI_COLORS["bg"], hover_color=settings.UI_COLORS["hover"],
                                 text_color=settings.UI_COLORS["text"], font=self.sub_font)
-        img_btn.grid(row=3, column=0, padx=20, pady=10, sticky="ew")
+        img_btn.grid(row=4, column=0, padx=20, pady=10, sticky="ew")
 
         # Video App Button
         vid_btn = ctk.CTkButton(card, text="Live Camera", command=self.run_video_mode, height=50,
                                 fg_color=settings.UI_COLORS["bg"], hover_color=settings.UI_COLORS["hover"],
                                 text_color=settings.UI_COLORS["text"], font=self.sub_font)
-        vid_btn.grid(row=3, column=1, padx=20, pady=10, sticky="ew")
+        vid_btn.grid(row=4, column=1, padx=20, pady=10, sticky="ew")
 
     def create_footer(self):
         footer_frame = ctk.CTkFrame(self.main_scroll, fg_color="transparent")
@@ -211,8 +230,13 @@ class MainApp(ctk.CTk):
         settings.YOLO_WEIGHTS = settings.YOLO_MODELS.get(selected_yolo_name, "assets/yolo/yolov8m-face.pt")
         settings.RECOGNITION_THRESHOLD = round(self.threshold_slider.get(), 2)
         settings.PROCESSING_SCALE = round(self.scale_slider.get(), 2)
+
+        # Update Classifier Type
+        settings.TRAINING_CONFIG["classifier"]["type"] = self.classifier_type_var.get()
+        
         self.toggle_yolo_widget()
-        print(f"Settings Updated: {settings.ENCODING_MODEL} | {settings.FACE_DETECTION_MODEL}")
+        print(
+            f"Settings Updated: {settings.ENCODING_MODEL} | {settings.FACE_DETECTION_MODEL} | {settings.TRAINING_CONFIG['classifier']['type']}")
 
     def add_new_person(self):
         # Ask for name
@@ -259,6 +283,21 @@ class MainApp(ctk.CTk):
         try:
             from apps.training_app import run_training_gui
             run_training_gui(self)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed: {e}")
+
+    def run_classifier_training(self):
+        try:
+            from apps.training_app import train_classifier
+            # Run in thread to not freeze UI
+            def _train():
+                try:
+                    train_classifier()
+                    messagebox.showinfo("Success", "Classifier retrained successfully!")
+                except Exception as e:
+                    messagebox.showerror("Error", f"Retraining failed: {e}")
+
+            threading.Thread(target=_train, daemon=True).start()
         except Exception as e:
             messagebox.showerror("Error", f"Failed: {e}")
 

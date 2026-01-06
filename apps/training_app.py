@@ -7,7 +7,10 @@ import customtkinter as ctk
 from tkinter import messagebox
 import pickle
 from sklearn.neural_network import MLPClassifier
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.model_selection import train_test_split  # Import train_test_split
+from xgboost import XGBClassifier  # Import XGBoost
+from collections import Counter
 
 # Updated import paths
 from core.database import Database
@@ -54,7 +57,7 @@ def get_encodings_for_image(image_rgb):
 
 
 def train_classifier(progress_callback=None):
-    """Trains an MLP Classifier on the stored embeddings."""
+    """Trains a Classifier (MLP or XGBoost) on the stored embeddings."""
     print("Training Classifier...")
     if progress_callback: progress_callback(0, 0, "Sınıflandırıcı Eğitiliyor...")
 
@@ -95,23 +98,82 @@ def train_classifier(progress_callback=None):
         print("Not enough data to train classifier (need at least 2 classes/samples).")
         return
 
-    # Train MLP Classifier
-    clf_config = settings.TRAINING_CONFIG.get("classifier", {})
-    clf = MLPClassifier(
-        hidden_layer_sizes=clf_config.get("hidden_layers", (128, 64)),
-        max_iter=clf_config.get("max_iter", 500),
-        solver=clf_config.get("solver", "adam"),
-        random_state=42,
-        verbose=True
-    )
+    # --- SCALING (CRITICAL FOR MLP, HELPFUL FOR XGBOOST) ---
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
 
     le = LabelEncoder()
     y_encoded = le.fit_transform(y)
 
-    clf.fit(X, y_encoded)
+    # --- CHOOSE CLASSIFIER ---
+    clf_config = settings.TRAINING_CONFIG.get("classifier", {})
+    clf_type = clf_config.get("type", "mlp")
 
-    # Save Model and Label Encoder
-    model_data = {"classifier": clf, "label_encoder": le}
+    if clf_type == "xgboost":
+        print("Using XGBoost Classifier...")
+
+        # Check if we can split (need at least 2 samples per class for stratify)
+        class_counts = Counter(y_encoded)
+        min_samples = min(class_counts.values())
+
+        if min_samples < 2:
+            print(f"Warning: Some classes have only {min_samples} sample. Skipping validation split.")
+            # Train on full data without validation set
+            clf = XGBClassifier(
+                n_estimators=clf_config.get("n_estimators", 100),
+                max_depth=clf_config.get("max_depth", 6),
+                learning_rate=clf_config.get("learning_rate", 0.1),
+                subsample=clf_config.get("subsample", 0.8),
+                eval_metric='mlogloss'
+            )
+            clf.fit(X_scaled, y_encoded, verbose=10)
+
+        else:
+            # Safe to split
+            try:
+                X_train, X_val, y_train, y_val = train_test_split(X_scaled, y_encoded, test_size=0.1,
+                                                                  stratify=y_encoded, random_state=42)
+
+                clf = XGBClassifier(
+                    n_estimators=clf_config.get("n_estimators", 100),
+                    max_depth=clf_config.get("max_depth", 6),
+                    learning_rate=clf_config.get("learning_rate", 0.1),
+                    subsample=clf_config.get("subsample", 0.8),
+                    eval_metric='mlogloss'
+                )
+                # Train with monitoring
+                clf.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=10)
+            except Exception as e:
+                print(f"Split failed ({e}). Training on full data.")
+                clf = XGBClassifier(
+                    n_estimators=clf_config.get("n_estimators", 100),
+                    max_depth=clf_config.get("max_depth", 6),
+                    learning_rate=clf_config.get("learning_rate", 0.1),
+                    subsample=clf_config.get("subsample", 0.8),
+                    eval_metric='mlogloss'
+                )
+                clf.fit(X_scaled, y_encoded, verbose=10)
+
+    else:
+        print("Using MLP Classifier...")
+        clf = MLPClassifier(
+            hidden_layer_sizes=clf_config.get("hidden_layers", (512, 256)),
+            max_iter=clf_config.get("max_iter", 500),
+            solver=clf_config.get("solver", "adam"),
+            learning_rate_init=clf_config.get("learning_rate_init", 0.001),
+            alpha=clf_config.get("alpha", 0.0001),
+            n_iter_no_change=clf_config.get("n_iter_no_change", 10),
+            random_state=42,
+            verbose=True
+        )
+        clf.fit(X_scaled, y_encoded)
+
+    # Save Model, Label Encoder AND Scaler
+    model_data = {
+        "classifier": clf,
+        "label_encoder": le,
+        "scaler": scaler
+    }
     with open(settings.CLASSIFIER_PATH, 'wb') as f:
         pickle.dump(model_data, f)
 

@@ -9,6 +9,10 @@ torch>=2.0.0        # Required for YOLO & DeepFace
 torchvision>=0.15.0
 tensorflow>=2.10.0  # Required for DeepFace backend
 
+# Machine Learning & Classification
+scikit-learn>=1.3.0 # For MLP Classifier, LabelEncoder, StandardScaler
+xgboost>=2.0.0      # For XGBoost Classifier
+
 # Database
 psycopg2-binary>=2.9.0
 pgvector>=0.2.0     # For vector similarity search in PostgreSQL
@@ -27,7 +31,6 @@ Pillow>=10.0.0
 pandas>=2.0.0
 matplotlib>=3.7.0
 seaborn>=0.12.0
-scikit-learn>=1.3.0 # For metrics (F1, Accuracy, Confusion Matrix)
 tqdm>=4.65.0        # For progress bars
 
 # Utilities

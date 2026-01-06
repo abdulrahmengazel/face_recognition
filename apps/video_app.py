@@ -18,38 +18,58 @@ from deepface import DeepFace
 # --- CLASSIFIER LOADING ---
 classifier_model = None
 label_encoder = None
-
+scaler = None  # Add scaler
 
 def load_classifier():
-    global classifier_model, label_encoder
+    global classifier_model, label_encoder, scaler
     if os.path.exists(settings.CLASSIFIER_PATH):
         try:
             with open(settings.CLASSIFIER_PATH, 'rb') as f:
                 data = pickle.load(f)
                 classifier_model = data.get("classifier")
                 label_encoder = data.get("label_encoder")
+                scaler = data.get("scaler")  # Load scaler
             print("Classifier loaded successfully.")
         except Exception as e:
             print(f"Failed to load classifier: {e}")
             classifier_model = None
             label_encoder = None
+            scaler = None
     else:
         print("Classifier file not found. Falling back to database search.")
 
 
 def predict_person(encoding, cursor):
     """Predicts the person using the loaded classifier or falls back to DB."""
-    if classifier_model and label_encoder:
+    if classifier_model and label_encoder and scaler:
         try:
+            # Ensure encoding is a numpy array
+            if isinstance(encoding, list):
+                encoding = np.array(encoding)
+
+            # Reshape for single sample prediction
             encoding_reshaped = encoding.reshape(1, -1)
-            probs = classifier_model.predict_proba(encoding_reshaped)[0]
+
+            # Scale the input
+            encoding_scaled = scaler.transform(encoding_reshaped)
+
+            # Get probabilities
+            probs = classifier_model.predict_proba(encoding_scaled)[0]
             best_idx = np.argmax(probs)
             confidence = probs[best_idx]
 
-            if confidence > 0.5:
+            # Debugging: Print confidence
+            # print(f"Prediction Confidence: {confidence:.2f} for class {best_idx}")
+
+            # Lower threshold to 0.3 for testing
+            if confidence > 0.3:
                 name = label_encoder.inverse_transform([best_idx])[0]
                 return name, (1.0 - confidence)
             else:
+                # Return best guess with "?" if confidence is low but not zero
+                if confidence > 0.15:
+                    name = label_encoder.inverse_transform([best_idx])[0]
+                    return f"{name}?", (1.0 - confidence)
                 return None, 1.0
         except Exception as e:
             print(f"Prediction error: {e}")
@@ -238,6 +258,7 @@ class FaceProcessingThread:
 
                             if encoding is not None:
                                 db_name, db_score = predict_person(encoding, cursor)
+                                # Use 0.5 as default threshold for classifier if not overridden
                                 threshold = 0.5 if classifier_model else settings.RECOGNITION_THRESHOLD
 
                                 if db_name and db_score < threshold:

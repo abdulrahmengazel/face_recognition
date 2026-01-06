@@ -14,34 +14,43 @@ from deepface import DeepFace
 # --- CLASSIFIER LOADING ---
 classifier_model = None
 label_encoder = None
-
+scaler = None  # Add scaler
 
 def load_classifier():
-    global classifier_model, label_encoder
+    global classifier_model, label_encoder, scaler
     if os.path.exists(settings.CLASSIFIER_PATH):
         try:
             with open(settings.CLASSIFIER_PATH, 'rb') as f:
                 data = pickle.load(f)
                 classifier_model = data.get("classifier")
                 label_encoder = data.get("label_encoder")
+                scaler = data.get("scaler")  # Load scaler
             print("Classifier loaded successfully.")
         except Exception as e:
             print(f"Failed to load classifier: {e}")
             classifier_model = None
             label_encoder = None
+            scaler = None
     else:
         print("Classifier file not found. Falling back to database search.")
 
 
 def predict_person(encoding):
     """Predicts the person using the loaded classifier or falls back to DB."""
-    if classifier_model and label_encoder:
+    if classifier_model and label_encoder and scaler:
         try:
+            # Ensure encoding is a numpy array
+            if isinstance(encoding, list):
+                encoding = np.array(encoding)
+                
             # Reshape for single sample prediction
             encoding_reshaped = encoding.reshape(1, -1)
 
+            # Scale the input
+            encoding_scaled = scaler.transform(encoding_reshaped)
+
             # Get probabilities
-            probs = classifier_model.predict_proba(encoding_reshaped)[0]
+            probs = classifier_model.predict_proba(encoding_scaled)[0]
             best_idx = np.argmax(probs)
             confidence = probs[best_idx]
 

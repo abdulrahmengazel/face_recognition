@@ -9,102 +9,191 @@
 
 ---
 
-### 🌟 Genel Bakış (Overview)
+### 🌟 Overview (Genel Bakış)
 
-Modern okul yönetimi için tasarlanmış uçtan uca, yüksek performanslı bir yüz tanıma sistemi. İdari görevler için **Tkinter tabanlı Masaüstü GUI** ile mobil ve web entegrasyonu için **FastAPI REST arka ucunu** birleştirir.
+An end-to-end, high-performance face recognition system designed for modern school management. It combines a *
+*Tkinter-based Desktop GUI** for administrative tasks with a **FastAPI REST backend** for mobile and web integration.
 
-Ölçeklenebilirlik göz önünde bulundurularak oluşturulan sistem, binlerce kimliği kolaylıkla destekleyen ultra hızlı benzerlik aramaları için **pgvector** uzantılı **PostgreSQL** kullanır.
-
----
-
-### 🚀 Temel Özellikler
-
-- **🖥️ Çift Arayüz:** Yönetici Masaüstü Uygulaması (Tkinter) & Mobil Uyumlu API (FastAPI).
-- **🧠 Gelişmiş Yapay Zeka Modelleri:**
-  - **Tespit (Detection):** HOG, CNN ve YOLOv8 desteği.
-  - **Tanıma (Recognition):** dlib ve FaceNet gömüleri (embeddings).
-- **⚡ Yüksek Performans:** `pgvector` kullanarak veritabanı tabanlı benzerlik araması.
-- **📸 Esnek Tanıma:** Statik resimleri, canlı web kamerası akışlarını ve toplu eğitimi destekler.
-- **📊 Güçlü Performans Testleri:** Model doğruluğunu ve hızını değerlendirmek için yerleşik araçlar.
-- **⚙️ Yapılandırılabilir:** Kolayca ayarlanabilen eşik değerleri, ölçeklendirme ve eğitim parametreleri.
+Built with scalability in mind, the system uses **PostgreSQL** with the **pgvector** extension for ultra-fast similarity
+searches, and advanced **Machine Learning Classifiers (MLP & XGBoost)** for state-of-the-art recognition accuracy.
 
 ---
 
-### 🛠️ Teknoloji Yığını (Tech Stack)
+### 🚀 Key Features
 
-- **Backend:** Python, FastAPI, Uvicorn
-- **GUI:** Tkinter, OpenCV
-- **AI/ML:** Ultralytics (YOLO), Face Recognition (dlib), DeepFace (FaceNet)
-- **Veritabanı:** PostgreSQL + `pgvector`
-- **Altyapı:** GPU hızlandırması için CUDA/cuDNN desteği
+- **🖥️ Dual Interface:** Admin Desktop App (CustomTkinter) & Mobile-friendly API (FastAPI).
+- **🧠 Advanced AI Models:**
+    - **Detection:** Support for HOG, CNN, and YOLOv8.
+    - **Recognition:** dlib and FaceNet embeddings.
+    - **Classification:** **MLP (Neural Network)** and **XGBoost** for high-accuracy identification.
+- **⚡ High Performance:**
+    - Database-driven storage using `pgvector`.
+    - Real-time **Face Tracking & Stabilization** in video streams.
+    - Fast re-training capabilities (train classifier in seconds).
+- **📸 Flexible Recognition:** Supports static images, live webcam streams, and batch training.
+- **📊 Robust Benchmarking:** Built-in tools to evaluate model accuracy and speed.
+- **⚙️ Configurable:** Easily adjustable thresholds, scaling, and training parameters via GUI.
 
 ---
 
-### 📥 Hızlı Başlangıç (Quick Start)
+### 🛠️ Tech Stack
 
-#### 1. Ortam Kurulumu
+- **Language:** Python 3.9+
+- **Backend Framework:** FastAPI, Uvicorn
+- **GUI Framework:** CustomTkinter, OpenCV
+- **AI/ML Libraries:**
+    - `ultralytics` (YOLOv8)
+    - `face_recognition` (dlib)
+    - `deepface` (FaceNet)
+    - `scikit-learn` (MLP Classifier)
+    - `xgboost` (Gradient Boosting)
+    - `tensorflow` & `torch`
+- **Database:** PostgreSQL + `pgvector`
+- **Infrastructure:** CUDA/cuDNN support for GPU acceleration
+
+---
+
+### 📋 Requirements
+
+- **Operating System:** Windows/Linux/MacOS
+- **Python:** 3.9 or higher
+- **Database:** PostgreSQL (v15+) with `pgvector` extension installed.
+- **Hardware:** NVIDIA GPU recommended for optimal performance (YOLO & CNN models).
+- **Other:** [Visual C++ Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe) (for Windows users
+  experiencing DLL errors).
+
+---
+
+### 📥 Setup & Installation
+
+#### 1. Clone the Repository
+
 ```powershell
-# Sanal ortamı oluştur ve etkinleştir
+git clone <repository-url>
+cd PythonProject
+```
+
+#### 2. Environment Setup
+```powershell
+# Create and activate virtual environment
 python -m venv .venv
 .\.venv\Scripts\activate
 
-# Bağımlılıkları yükle
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-#### 2. Eğitim Verilerini Hazırlama
-Resimlerinizi `data/TrainingImages/` içinde kişi başına bir klasör yapısı kullanarak düzenleyin:
+#### 3. Database Configuration
+
+1. Ensure PostgreSQL is running.
+2. Create a database (default name: `postgres`).
+3. Enable `pgvector`: `CREATE EXTENSION IF NOT EXISTS vector;`
+4. Update connection details in `config/settings.py` (see [Environment Variables](#-environment-variables-config)).
+
+#### 4. Prepare Training Data
+
+Organize your images in `data/TrainingImages/` with one folder per person:
 ```text
 data/TrainingImages/
-├── 👤 Ali/
+├── Ali/
 │   ├── img1.jpg
 │   └── img2.jpg
-└── 👤 Ayse/
+└── Ayse/
     ├── img1.jpg
     └── img2.jpg
 ```
 
-#### 3. Masaüstü Uygulamasını Çalıştırın
+---
+
+### 🚀 Run Commands
+
+#### Desktop Application (GUI)
 ```powershell
 python main.py
 ```
-*Modelleri yapılandırmak, toplu eğitim çalıştırmak ve tanımayı test etmek için GUI'yi kullanın.*
 
-#### 4. API Sunucusunu Başlatın
+*Use the GUI to configure models, run batch training, switch classifiers (MLP/XGBoost), and test recognition.*
+
+#### API Server
 ```powershell
 python api.py
 ```
-*API `http://localhost:8000` adresinde mevcut olacaktır. Dokümanlara `/docs` adresinden erişebilirsiniz.*
+
+*The API will be available at `http://localhost:8000`. Access Swagger docs at `/docs`.*
 
 ---
 
-### 📂 Proje Yapısı
+### 📜 Scripts
+
+| Script                          | Description                                                                                                |
+|:--------------------------------|:-----------------------------------------------------------------------------------------------------------|
+| `main.py`                       | Primary entry point for the Desktop Management GUI.                                                        |
+| `api.py`                        | Primary entry point for the FastAPI REST server.                                                           |
+| `benchmarks/evaluate_models.py` | Evaluates model performance (Accuracy, Precision, Recall) using a train-test split on the current dataset. |
+
+---
+
+### ⚙️ Environment Variables & Config
+
+Configuration is primarily managed in `config/settings.py`. Key parameters include:
+
+- **Database:** `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`.
+- **AI Models:**
+    - `ENCODING_MODEL`: "facenet" or "dlib".
+    - `FACE_DETECTION_MODEL`: "yolo", "hog", or "cnn".
+    - `YOLO_WEIGHTS`: Path to the selected YOLO model.
+- **Classifier:**
+    - `type`: "mlp" or "xgboost".
+    - `hidden_layers`, `max_iter`, `n_estimators`, etc.
+- **Thresholds:** `RECOGNITION_THRESHOLD` (default: 0.4).
+- **UI Colors:** Customizable theme in `UI_COLORS`.
+
+---
+
+### 🧪 Tests & Benchmarking
+
+To run the model evaluation script:
+
+```powershell
+python benchmarks/evaluate_models.py
+```
+
+This script will:
+
+1. Load images from `data/TrainingImages/`.
+2. Generate embeddings using the configured models.
+3. Train the selected Classifier (MLP/XGBoost).
+4. Output accuracy metrics and a Confusion Matrix.
+
+---
+
+### 📂 Project Structure
 
 ```text
 PythonProject/
-├── 📱 api.py              # FastAPI sunucu giriş noktası
-├── 🖥️ main.py             # Masaüstü GUI giriş noktası
-├── 📂 apps/               # GUI uygulama modülleri
-├── 📂 assets/             # Statik varlıklar (YOLO ağırlıkları)
-├── 📂 benchmarks/         # Performans test betikleri
-├── 📂 config/             # Genel yapılandırmalar
-├── 📂 core/               # Veritabanı & Dedektör mantığı
-└── 📂 data/               # Eğitim & Test veri setleri
+├── api.py              # FastAPI server entry point
+├── main.py             # Desktop GUI entry point
+├── apps/               # GUI application modules (training, image, video apps)
+├── assets/             # Static assets (YOLO weights, classifiers)
+├── benchmarks/         # Performance evaluation scripts
+├── config/             # System-wide settings & database config
+├── core/               # Core logic (database handlers, face detectors)
+├── data/               # Datasets for training and testing
+├── requirements.txt    # Project dependencies
+└── README.md           # Project documentation
 ```
 
 ---
 
-### 💡 Notlar & İpuçları
+### 🚧 TODO / Upcoming Improvements
 
-- **GPU Hızlandırma:** YOLO ve CNN modelleri için CUDA ve cuDNN'in doğru yapılandırıldığından emin olun.
-- **Veritabanı:** `pgvector` uzantısı yüklü bir PostgreSQL örneği gerektirir.
-- **YOLO Ağırlıkları:** `.pt` dosyalarınızı `assets/yolo/` içine yerleştirin.
-- **Sorun Giderme:**
-  - *DLL Hataları:* [Visual C++ Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe) yükleyin.
-  - *Veritabanı:* `config/settings.py` içindeki bağlantı dizelerini kontrol edin.
+- [ ] Implement a dynamic `.env` file loader for database credentials.
+- [ ] Add Docker support for easy deployment of the API and Database.
+- [ ] Implement more robust unit tests for core detection logic.
+- [ ] Expand the API to include user management endpoints.
 
 ---
 
-### 📄 Lisans
+### 📄 License
 
-Bu proje MIT Lisansı altında lisanslanmıştır - ayrıntılar için [LICENSE](LICENSE) dosyasına bakın.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

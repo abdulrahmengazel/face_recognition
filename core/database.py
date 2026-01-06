@@ -1,7 +1,7 @@
 import psycopg2
 from psycopg2 import pool, extras
 import numpy as np
-import os
+
 from contextlib import contextmanager
 # Updated import path
 from config.settings import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS
